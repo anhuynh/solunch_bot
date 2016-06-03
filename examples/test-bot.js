@@ -38,29 +38,58 @@ controller.hears('poll suggestions', 'ambient', function(bot, message) {
 });
 
 controller.hears(['start poll (.*)'], 'ambient', function(bot, message) {
-   controller.storage.channels.save({id: message.channel, question: message.match[1], status: 'open'}, function(err, id) {
+   controller.storage.channels.save(
+      {
+         id: message.channel, 
+         question: message.match[1], 
+         status: 'open',
+         userVotes: {},
+         options: {
+            '1':  {name: 'Big Bone Bbq', count: 0},
+            '2':  {name: 'Chinese', count: 0},
+            '3':  {name: 'Dagwoods', count: 0},
+            '4':  {name: 'Indian', count: 0},
+            '5':  {name: 'McDonalds', count: 0},
+            '6':  {name: 'Pho', count: 0},
+            '7':  {name: 'Pizza', count: 0},
+            '8':  {name: 'Shawarma', count: 0},
+            '9':  {name: 'Thai', count: 0},
+            '10': {name: 'Wiches Cauldron', count: 0},
+            '11': {name: 'The works', count: 0}
+         }
+      }, function(err, id) {
       bot.reply(message, "Current poll: *" + message.match[1] + "* Type `vote` and then an option.");
    });
 });
 
-controller.hears('vote (.*)', 'ambient', function(bot, message) {
+controller.hears('solunch vote (.*)', 'ambient', function(bot, message) {
    controller.storage.channels.get(message.channel, function(err, channel_data) {
       if (channel_data['status'] === 'open') {
-         var vote = message.match[1].toLowerCase(),
-             thanks = "Thank you for your vote! :+1:";
-         if (channel_data.hasOwnProperty(vote)) {
-            channel_data[vote]++;
-            controller.storage.channels.save(channel_data, function(err, id) {
-               bot.reply(message, thanks);
+         var vote = message.match[1];
+         if (channel_data.options.hasOwnProperty(vote)) {
+            bot.api.users.info({user: message.user}, function(err, response) {
+               if (err) { 
+                  bot.reply(message, "Sorry, I don't think you exist!");
+               } else {
+                  if (channel_data.userVotes.hasOwnProperty(response.real_name)) {
+                     var previousVote = channel_data.userVotes[response.real_name]
+                     channel_data.options[previousVote].count--;
+                     channel_data.options[vote].count++;
+                     bot.reply(message, "Thanks for revoting. You previously voted for: " + channel_data.options[previousVote].name +
+                        "\nYou now voted for: " + channel_data.options[vote].name + 
+                        "\nVote again if you wish, I won't judge your indecisiveness! :wizard:");
+                  } else {
+                     channel_data.user_votes[response.real_name] = vote;
+                     channel_data.options[vote].count++;
+                     bot.reply(message, "Thanks for voting. You voted for: " + channel_data.options[vote].name + 
+                        "\nFeel free to vote again by thing `vote` and an option");
+                  }
+               }
             });
+
          } else {
-            channel_data[vote] = 1;
-            controller.storage.channels.save(channel_data, function(err, id) {
-               bot.reply(message, thanks);
-            });
+            bot.reply(message, "Sorry, that is not an option; Type  `poll suggestions` or see the Pinned Items for number orders");
          }
-      } else {
-         bot.reply(message, "Sorry, but the poll is now closed.");
       }
    });
 });
