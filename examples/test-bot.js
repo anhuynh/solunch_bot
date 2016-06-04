@@ -58,8 +58,16 @@ controller.hears('start poll (.*)', 'ambient', function(bot, message) {
             '11': {name: 'The works', count: 0}
          }
       }, function(err, id) {
-      bot.reply(message, "Current poll: *" + message.match[1] + "* Type `solunch vote` and then the number of an option.");
+      bot.reply(message, "Current poll: *" + message.match[1] + "* Type `solunch vote` and then the number of an option. The poll will automatically close in 2 hours. :timer_clock:");
    });
+
+   setTimeout(function() {
+      controller.storage.channels.get(message.channel, function(err, channel_data) {
+         if (channel_data['status'] === 'open') {
+            closePoll(bot, message);
+         }
+      });
+   }, 2 * 3600000);
 });
 
 controller.hears('solunch vote (.*)', 'ambient', function(bot, message) {
@@ -98,6 +106,10 @@ controller.hears('solunch vote (.*)', 'ambient', function(bot, message) {
 });
 
 controller.hears('close poll', 'ambient', function(bot, message) {
+   closePoll(bot, message);
+});
+
+function closePoll(bot, message) {
    controller.storage.channels.get(message.channel, function(err, channel_data) {
       channel_data['status'] = 'closed';
       var winner = {key: '', votes: 0};
@@ -110,7 +122,7 @@ controller.hears('close poll', 'ambient', function(bot, message) {
          bot.reply(message, "The poll *" + channel_data['question'] + "* is now closed.\n:tada: The winner is *" + winner['key'] + "* with " + winner['votes'] + " votes! :tada:");
       });
    });
-});
+}
 
 controller.hears('poll status', 'ambient', function(bot, message) {
    getPollResults(bot, message);
