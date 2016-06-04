@@ -112,14 +112,17 @@ controller.hears('close poll', 'ambient', function(bot, message) {
 function closePoll(bot, message) {
    controller.storage.channels.get(message.channel, function(err, channel_data) {
       channel_data['status'] = 'closed';
-      var winner = {key: '', votes: 0};
+      var winner = {key: [''], votes: 0};
       for (var option in channel_data.options) {
-         if (channel_data.options[option].count > winner.votes){
-            winner = {key: channel_data.options[option].name, votes: channel_data.options[option].count};
+         if (channel_data.options[option].count > winner.votes) {
+            winner = {key: [channel_data.options[option].name], votes: channel_data.options[option].count};
+         } else if(channel_data.options[option].count == winner.votes) {
+            winner['key'].push(channel_data.options[option].name);
          }
       }
+      shuffleArray(winner['key']);
       controller.storage.channels.save(channel_data, function(err, id) {
-         bot.reply(message, "The poll *" + channel_data['question'] + "* is now closed.\n:tada: The winner is *" + winner['key'] + "* with " + winner['votes'] + " votes! :tada:");
+         bot.reply(message, "The poll *" + channel_data['question'] + "* is now closed.\n:tada: The winner is *" + winner['key'][0] + "* with " + winner['votes'] + " votes! :tada:");
       });
    });
 }
@@ -148,6 +151,20 @@ function getPollResults(bot, message) {
                }
       );
    });
+}
+
+/*
+ * Randomize array element order in-place.
+ * Using Durstenfeld shuffle algorithm.
+ */
+function shuffleArray(array) {
+    for (var i = array.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+    }
+    return array;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
