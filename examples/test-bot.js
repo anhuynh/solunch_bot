@@ -101,12 +101,9 @@ controller.hears('close poll', 'ambient', function(bot, message) {
    controller.storage.channels.get(message.channel, function(err, channel_data) {
       channel_data['status'] = 'closed';
       var winner = {key: '', votes: 0};
-      for (var property in channel_data) {
-         if (channel_data[property] > winner['votes']) {
-            winner = {key: property, votes: channel_data[property]};
-         } else if (channel_data[property] == winner['votes']) {
-            winner['key'] = winner['key'].concat(" or " + property);
-            winner['votes'] = channel_data[property];
+      for (var option in channel_data.options) {
+         if (channel_data.options[option].count > winner.votes){
+            winner = {key: channel_data.options[option].name, votes: channel_data.options[option].count};
          }
       }
       controller.storage.channels.save(channel_data, function(err, id) {
