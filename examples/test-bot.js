@@ -58,8 +58,16 @@ controller.hears('start poll (.*)', 'ambient', function(bot, message) {
             '11': {name: 'The works', count: 0}
          }
       }, function(err, id) {
-      bot.reply(message, "Current poll: *" + message.match[1] + "* Type `solunch vote` and then the number of an option.");
+      bot.reply(message, "Current poll: *" + message.match[1] + "* Type `solunch vote` and then the number of an option. The poll will automatically close in 2 hours. :timer_clock:");
    });
+
+   setTimeout(function() {
+      controller.storage.channels.get(message.channel, function(err, channel_data) {
+         if (channel_data['status'] === 'open') {
+            closePoll(bot, message);
+         }
+      });
+   }, 2 * 3600000);
 });
 
 controller.hears('solunch vote (.*)', 'ambient', function(bot, message) {
@@ -98,22 +106,26 @@ controller.hears('solunch vote (.*)', 'ambient', function(bot, message) {
 });
 
 controller.hears('close poll', 'ambient', function(bot, message) {
+   closePoll(bot, message);
+});
+
+function closePoll(bot, message) {
    controller.storage.channels.get(message.channel, function(err, channel_data) {
       channel_data['status'] = 'closed';
-      var winner = {key: '', votes: 0};
-      for (var property in channel_data) {
-         if (channel_data[property] > winner['votes']) {
-            winner = {key: property, votes: channel_data[property]};
-         } else if (channel_data[property] == winner['votes']) {
-            winner['key'] = winner['key'].concat(" or " + property);
-            winner['votes'] = channel_data[property];
+      var winner = {name: [''], votes: 0};
+      for (var option in channel_data.options) {
+         if (channel_data.options[option].count > winner.votes) {
+            winner = {name: [channel_data.options[option].name], votes: channel_data.options[option].count};
+         } else if(channel_data.options[option].count == winner.votes) {
+            winner['name'].push(channel_data.options[option].name);
          }
       }
+      shuffleArray(winner['name']);
       controller.storage.channels.save(channel_data, function(err, id) {
-         bot.reply(message, "The poll *" + channel_data['question'] + "* is now closed.\n:tada: The winner is *" + winner['key'] + "* with " + winner['votes'] + " votes! :tada:");
+         bot.reply(message, "The poll *" + channel_data['question'] + "* is now closed.\n:tada: The winner is *" + winner['name'][0] + "* with " + winner['votes'] + " votes! :tada:");
       });
    });
-});
+}
 
 controller.hears('poll status', 'ambient', function(bot, message) {
    getPollResults(bot, message);
@@ -139,6 +151,20 @@ function getPollResults(bot, message) {
                }
       );
    });
+}
+
+/*
+ * Randomize array element order in-place.
+ * Using Durstenfeld shuffle algorithm.
+ */
+function shuffleArray(array) {
+    for (var i = array.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+    }
+    return array;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
