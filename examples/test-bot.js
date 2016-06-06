@@ -37,7 +37,7 @@ controller.hears('poll options', 'ambient', function(bot, message) {
    bot.reply(message, "Here are the poll options: \n1) Big bone bbq\n2) Chinese\n3) Dagwoods\n4) Indian\n5) McDonald's\n6) Pho\n7) Pizza\n8) Shawarma\n9) Thai\n10) Wiches cauldron\n11) The works\n");
 });
 
-controller.hears('start poll', 'ambient', function(bot, message) {
+controller.hears('start poll', ['direct_mention', 'mention'], function(bot, message) {
    controller.storage.channels.save(
       {
          id: message.channel,
@@ -103,7 +103,7 @@ controller.hears('solunch vote (.*)', 'ambient', function(bot, message) {
    });
 });
 
-controller.hears('close poll', 'ambient', function(bot, message) {
+controller.hears('close poll', ['direct_mention', 'mention'], function(bot, message) {
    closePoll(bot, message);
 });
 
