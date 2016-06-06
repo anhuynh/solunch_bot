@@ -112,17 +112,17 @@ controller.hears('close poll', 'ambient', function(bot, message) {
 function closePoll(bot, message) {
    controller.storage.channels.get(message.channel, function(err, channel_data) {
       channel_data['status'] = 'closed';
-      var winner = {key: [''], votes: 0};
+      var winner = {name: [''], votes: 0};
       for (var option in channel_data.options) {
          if (channel_data.options[option].count > winner.votes) {
-            winner = {key: [channel_data.options[option].name], votes: channel_data.options[option].count};
+            winner = {name: [channel_data.options[option].name], votes: channel_data.options[option].count};
          } else if(channel_data.options[option].count == winner.votes) {
-            winner['key'].push(channel_data.options[option].name);
+            winner['name'].push(channel_data.options[option].name);
          }
       }
-      shuffleArray(winner['key']);
+      shuffleArray(winner['name']);
       controller.storage.channels.save(channel_data, function(err, id) {
-         bot.reply(message, "The poll *" + channel_data['question'] + "* is now closed.\n:tada: The winner is *" + winner['key'][0] + "* with " + winner['votes'] + " votes! :tada:");
+         bot.reply(message, "The poll *" + channel_data['question'] + "* is now closed.\n:tada: The winner is *" + winner['name'][0] + "* with " + winner['votes'] + " votes! :tada:");
       });
    });
 }
