@@ -37,11 +37,10 @@ controller.hears('poll options', 'ambient', function(bot, message) {
    bot.reply(message, "Here are the poll options: \n1) Big bone bbq\n2) Chinese\n3) Dagwoods\n4) Indian\n5) McDonald's\n6) Pho\n7) Pizza\n8) Shawarma\n9) Thai\n10) Wiches cauldron\n11) The works\n");
 });
 
-controller.hears('start poll (.*)', 'ambient', function(bot, message) {
+controller.hears('start poll', 'ambient', function(bot, message) {
    controller.storage.channels.save(
       {
-         id: message.channel, 
-         question: message.match[1], 
+         id: message.channel,
          status: 'open',
          userVotes: {},
          options: {
@@ -58,7 +57,7 @@ controller.hears('start poll (.*)', 'ambient', function(bot, message) {
             '11': {name: 'The works', count: 0}
          }
       }, function(err, id) {
-      bot.reply(message, "Current poll: *" + message.match[1] + "* Type `solunch vote` and then the number of an option. The poll will automatically close in 2 hours. :timer_clock:");
+      bot.reply(message, "The lunch poll is now open!\nType `solunch vote` and then the number of an option. To see the numbers and options, type `poll options`.\nThe poll will automatically close in 2 hours. :timer_clock:");
    });
 
    setTimeout(function() {
@@ -95,7 +94,6 @@ controller.hears('solunch vote (.*)', 'ambient', function(bot, message) {
                   controller.storage.channels.save(channel_data);
                }
             });
-
          } else {
             bot.reply(message, "Sorry, that is not an option. Type  `poll options` or see the Pinned Items for number orders.");
          }
@@ -122,7 +120,7 @@ function closePoll(bot, message) {
       }
       shuffleArray(winner['name']);
       controller.storage.channels.save(channel_data, function(err, id) {
-         bot.reply(message, "The poll *" + channel_data['question'] + "* is now closed.\n:tada: The winner is *" + winner['name'][0] + "* with " + winner['votes'] + " votes! :tada:");
+         bot.reply(message, "The lunch poll is now closed.\n:tada: The winner is *" + winner['name'][0] + "* with " + winner['votes'] + " votes! :tada:");
       });
    });
 }
@@ -135,13 +133,13 @@ function getPollResults(bot, message) {
    controller.storage.channels.get(message.channel, function(err, channel_data) {
       var results = '';
       for (var property in channel_data) {
-         if (property != 'id' && property != 'question' && property != 'status') {
+         if (property != 'id' && property != 'status') {
             results = results.concat("\n" + property + ": " + channel_data[property]);
          }
       }
 
       bot.reply(message, 
-               {text: 'Poll status: *' + channel_data['status'] +'*\n' + 'Question: *' + channel_data['question'] + '*\nHere are the current results: ', 
+               {text: 'Poll status: *' + channel_data['status'] + '*\nHere are the current results: ', 
                   attachments: [
                      {
                         text: results,
