@@ -119,6 +119,7 @@ function closePoll(bot, message) {
          }
       }
       shuffleArray(winner['name']);
+      channel_data['winner'] = winner['name'][0];
       controller.storage.channels.save(channel_data, function(err, id) {
          bot.reply(message, "The lunch poll is now closed.\n:tada: The winner is *" + winner['name'][0] + "* with " + winner['votes'] + " votes! :tada:");
       });
@@ -126,20 +127,17 @@ function closePoll(bot, message) {
 }
 
 controller.hears('poll status', 'ambient', function(bot, message) {
-   getPollResults(bot, message);
-});
-
-function getPollResults(bot, message) {
    controller.storage.channels.get(message.channel, function(err, channel_data) {
-      var results = '';
-      for (var property in channel_data) {
-         if (property != 'id' && property != 'status') {
-            results = results.concat("\n" + property + ": " + channel_data[property]);
-         }
+      var results = '',
+      status = 'Poll status: *' + channel_data['status'] + '*';
+      for (var option in channel_data.options) {
+         results = results.concat("\n" + channel_data.options[option].name + ": " + channel_data.options[option].count);
       }
-
+      if (channel_data.status === 'closed') {
+         status = status.concat("\nWinner: *" + channel_data['winner'] + "*");
+      };
       bot.reply(message, 
-               {text: 'Poll status: *' + channel_data['status'] + '*\nHere are the current results: ', 
+               {text: status + '\nHere are the current results: ', 
                   attachments: [
                      {
                         text: results,
@@ -149,7 +147,7 @@ function getPollResults(bot, message) {
                }
       );
    });
-}
+});
 
 /*
  * Randomize array element order in-place.
