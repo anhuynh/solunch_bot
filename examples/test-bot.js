@@ -11,7 +11,7 @@ if (!process.env.token) {
 
 var controller = Botkit.slackbot({
    debug: false,
-   json_file_store: 'test-bot-storage'
+   json_file_store: 'solunch-bot-storage'
 });
 
 controller.spawn({
@@ -20,9 +20,6 @@ controller.spawn({
    if (err) {
       throw new Error(err);
    }
-   setTimeout(function() {
-      bot.closeRTM();
-   }, 600000);
 });
 
 controller.hears(['are you there'], ['direct_message','direct_mention','mention'], function(bot, message) {
@@ -33,7 +30,7 @@ controller.hears(['are you there'], ['direct_message','direct_mention','mention'
 //                                                          POLL STUFFS                                                        //
 //*****************************************************************************************************************************//
 
-controller.hears('poll options', 'ambient', function(bot, message) {
+controller.hears('poll options', 'direct_mention', function(bot, message) {
    bot.reply(message, "Here are the poll options: \n1) Big bone bbq\n2) Chinese\n3) Dagwoods\n4) Indian\n5) McDonald's\n6) Pho\n7) Pizza\n8) Shawarma\n9) Thai\n10) Wiches cauldron\n11) The works\n");
 });
 
@@ -57,7 +54,7 @@ controller.hears('start poll', ['direct_mention', 'mention'], function(bot, mess
             '11': {name: 'The works', count: 0}
          }
       }, function(err, id) {
-      bot.reply(message, "The lunch poll is now open!\nType `solunch vote` and then the number of an option. To see the numbers and options, type `poll options`.\nThe poll will automatically close in 2 hours. :timer_clock:");
+      bot.reply(message, "The lunch poll is now open!\nType `@solunch_bot vote` and then the number of an option. To see the numbers and options, type `poll options`.\nThe poll will automatically close in 2 hours. :timer_clock:");
    });
 
    setTimeout(function() {
@@ -69,7 +66,7 @@ controller.hears('start poll', ['direct_mention', 'mention'], function(bot, mess
    }, 2 * 3600000);
 });
 
-controller.hears('solunch vote (.*)', 'ambient', function(bot, message) {
+controller.hears('vote (.*)', 'direct_mention', function(bot, message) {
    controller.storage.channels.get(message.channel, function(err, channel_data) {
       if (channel_data['status'] === 'open') {
          var vote = message.match[1];
@@ -82,13 +79,13 @@ controller.hears('solunch vote (.*)', 'ambient', function(bot, message) {
                      var previousVote = channel_data.userVotes[response.user.real_name];
                      channel_data.options[previousVote].count--;
                      channel_data.options[vote].count++;
-                     bot.reply(message, "Thanks for revoting. You previously voted for: *" + channel_data.options[previousVote].name +
-                        "*\nYou now voted for: *" + channel_data.options[vote].name + 
+                     bot.reply(message, "Thanks for revoting, " + response.user.profile.first_name +". You previously voted for: *" + channel_data.options[previousVote].name +
+                        "*\nYour current vote is: *" + channel_data.options[vote].name + 
                         "*\nVote again if you wish, I won't judge your indecisiveness! :wizard:");
                   } else {
                      channel_data.options[vote].count++;
-                     bot.reply(message, "Thanks for voting. You voted for: *" + channel_data.options[vote].name + 
-                        "*\nFeel free to vote again by typing `solunch vote` and then the number of an option.");
+                     bot.reply(message, "Thanks for voting, " + response.user.profile.first_name + ". You voted for: *" + channel_data.options[vote].name + 
+                        "*\nFeel free to vote again to change your vote. To see more commands, see the list in Pinned Items.");
                   }
                   channel_data.userVotes[response.user.real_name] = vote;
                   controller.storage.channels.save(channel_data);
@@ -107,26 +104,7 @@ controller.hears('close poll', ['direct_mention', 'mention'], function(bot, mess
    closePoll(bot, message);
 });
 
-function closePoll(bot, message) {
-   controller.storage.channels.get(message.channel, function(err, channel_data) {
-      channel_data['status'] = 'closed';
-      var winner = {name: [''], votes: 0};
-      for (var option in channel_data.options) {
-         if (channel_data.options[option].count > winner.votes) {
-            winner = {name: [channel_data.options[option].name], votes: channel_data.options[option].count};
-         } else if(channel_data.options[option].count == winner.votes) {
-            winner['name'].push(channel_data.options[option].name);
-         }
-      }
-      shuffleArray(winner['name']);
-      channel_data['winner'] = winner['name'][0];
-      controller.storage.channels.save(channel_data, function(err, id) {
-         bot.reply(message, "The lunch poll is now closed.\n:tada: The winner is *" + winner['name'][0] + "* with " + winner['votes'] + " votes! :tada:");
-      });
-   });
-}
-
-controller.hears('poll status', 'ambient', function(bot, message) {
+controller.hears('poll status', 'direct_mention', function(bot, message) {
    controller.storage.channels.get(message.channel, function(err, channel_data) {
       var results = '',
       status = 'Poll status: *' + channel_data['status'] + '*';
@@ -148,6 +126,25 @@ controller.hears('poll status', 'ambient', function(bot, message) {
       );
    });
 });
+
+function closePoll(bot, message) {
+   controller.storage.channels.get(message.channel, function(err, channel_data) {
+      channel_data['status'] = 'closed';
+      var winner = {name: [''], votes: 0};
+      for (var option in channel_data.options) {
+         if (channel_data.options[option].count > winner.votes) {
+            winner = {name: [channel_data.options[option].name], votes: channel_data.options[option].count};
+         } else if(channel_data.options[option].count == winner.votes) {
+            winner['name'].push(channel_data.options[option].name);
+         }
+      }
+      shuffleArray(winner['name']);
+      channel_data['winner'] = winner['name'][0];
+      controller.storage.channels.save(channel_data, function(err, id) {
+         bot.reply(message, "The lunch poll is now closed.\n:tada: The winner is *" + winner['name'][0] + "* with " + winner['votes'] + " votes! :tada:");
+      });
+   });
+}
 
 /*
  * Randomize array element order in-place.
@@ -193,23 +190,13 @@ controller.hears('menu', ['direct_message','direct_mention','mention'], function
    bot.reply(message, "DM me one of the keywords. Here is what I have available:\n\n*Pizza:* `pizzatime`\n*Thai:* `thai`")
 });
 
-controller.hears(['dm an'],['direct_message','direct_mention'],function(bot, message) {
-   bot.reply(message, "Direct messaging An...");
-   bot.startPrivateConversation({'user': userID}, function(err, convo) {
-      bot.api.users.info({user: message.user}, function(err, response) {
-         convo.say(response.user.real_name + " says hello!");
-      });
-      convo.next();
-   });
-});
-
 //*****************************************************************************************************************************//
 //                                                          FOOD ORDERING                                                      //
 //*****************************************************************************************************************************//
 
 controller.hears(['thai'], ['direct_message'], function(bot, message) {
    bot.startConversation(message, function(err, convo) {
-      convo.say({text: "Take a look at the lunch menu! sabaithaicuisine.ca/#!lunch/c23f6"});
+      convo.say("Take a look at the lunch menu! sabaithaicuisine.ca/#!lunch/c23f6");
       convo.ask("Choose from the stir fry, curry, or stir fry noodles. Which dish would you like?", function(response, convo) {
          convo.ask("What type of meat/tofu? (Beef, chicken or tofu)", function(response, convo) {
             convo.ask("What spice level? (0 star to 5 star) :hot_pepper:", function(response, convo) {
