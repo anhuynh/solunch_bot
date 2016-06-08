@@ -1,4 +1,3 @@
-
 var Botkit = require('../lib/Botkit.js');
 var name, userID = '__YOUR USER ID__';
 
@@ -35,9 +34,9 @@ controller.hears('poll options', 'direct_mention', function(bot, message) {
 });
 
 controller.hears('start poll', ['direct_mention', 'mention'], function(bot, message) {
-   controller.storage.channels.save(
+   controller.storage.teams.save(
       {
-         id: message.channel,
+         id: 'lunchSave',
          status: 'open',
          userVotes: {},
          options: {
@@ -58,7 +57,7 @@ controller.hears('start poll', ['direct_mention', 'mention'], function(bot, mess
    });
 
    setTimeout(function() {
-      controller.storage.channels.get(message.channel, function(err, channel_data) {
+      controller.storage.teams.get('lunchSave', function(err, channel_data) {
          if (channel_data['status'] === 'open') {
             closePoll(bot, message);
          }
@@ -67,7 +66,7 @@ controller.hears('start poll', ['direct_mention', 'mention'], function(bot, mess
 });
 
 controller.hears('vote (.*)', 'direct_mention', function(bot, message) {
-   controller.storage.channels.get(message.channel, function(err, channel_data) {
+   controller.storage.teams.get('lunchSave', function(err, channel_data) {
       if (channel_data['status'] === 'open') {
          var vote = message.match[1];
          if (channel_data.options.hasOwnProperty(vote)) {
@@ -88,7 +87,7 @@ controller.hears('vote (.*)', 'direct_mention', function(bot, message) {
                         "*\nFeel free to vote again to change your vote. To see more commands, see the list in Pinned Items.");
                   }
                   channel_data.userVotes[response.user.real_name] = vote;
-                  controller.storage.channels.save(channel_data);
+                  controller.storage.teams.save(channel_data);
                }
             });
          } else {
@@ -105,7 +104,7 @@ controller.hears('close poll', ['direct_mention', 'mention'], function(bot, mess
 });
 
 controller.hears('poll status', 'direct_mention', function(bot, message) {
-   controller.storage.channels.get(message.channel, function(err, channel_data) {
+   controller.storage.teams.get('lunchSave', function(err, channel_data) {
       var results = '',
       status = 'Poll status: *' + channel_data['status'] + '*';
       for (var option in channel_data.options) {
@@ -128,7 +127,7 @@ controller.hears('poll status', 'direct_mention', function(bot, message) {
 });
 
 function closePoll(bot, message) {
-   controller.storage.channels.get(message.channel, function(err, channel_data) {
+   controller.storage.teams.get('lunchSave', function(err, channel_data) {
       channel_data['status'] = 'closed';
       var winner = {name: [''], votes: 0};
       for (var option in channel_data.options) {
@@ -140,7 +139,7 @@ function closePoll(bot, message) {
       }
       shuffleArray(winner['name']);
       channel_data['winner'] = winner['name'][0];
-      controller.storage.channels.save(channel_data, function(err, id) {
+      controller.storage.teams.save(channel_data, function(err, id) {
          bot.reply(message, "The lunch poll is now closed.\n:tada: The winner is *" + winner['name'][0] + "* with " + winner['votes'] + " votes! :tada:");
       });
    });
@@ -159,128 +158,3 @@ function shuffleArray(array) {
     }
     return array;
 }
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-controller.hears(['hello','hi','hey', 'good day sir'], ['direct_message','direct_mention','mention'], function(bot, message){
-   bot.startConversation(message, function(err, convo) {
-      bot.api.users.info({user: message.user}, function(err, response) {
-         convo.say("Hey there " + response.user.profile.first_name + "!");
-         convo.ask("Are you hungry?", [
-            {
-               pattern: bot.utterances.yes,
-               callback: function(response, convo) {
-                  convo.say("Oh no! Let me help you out. Ask me for `menu` and I'll give you a list of what you can choose from.");
-                  convo.next();
-               }
-            },
-            {
-               pattern: bot.utterances.no,
-               callback: function(response, convo){
-                  convo.say("Ok, have a great day then! :smiley:");
-                  convo.next();
-               }
-            }
-         ]);
-      });
-   });
-});
-
-controller.hears('menu', ['direct_message','direct_mention','mention'], function(bot, message) {
-   bot.reply(message, "DM me one of the keywords. Here is what I have available:\n\n*Pizza:* `pizzatime`\n*Thai:* `thai`")
-});
-
-//*****************************************************************************************************************************//
-//                                                          FOOD ORDERING                                                      //
-//*****************************************************************************************************************************//
-
-controller.hears(['thai'], ['direct_message'], function(bot, message) {
-   bot.startConversation(message, function(err, convo) {
-      convo.say("Take a look at the lunch menu! sabaithaicuisine.ca/#!lunch/c23f6");
-      convo.ask("Choose from the stir fry, curry, or stir fry noodles. Which dish would you like?", function(response, convo) {
-         convo.ask("What type of meat/tofu? (Beef, chicken or tofu)", function(response, convo) {
-            convo.ask("What spice level? (0 star to 5 star) :hot_pepper:", function(response, convo) {
-               convo.next();
-            }, {'key': 'spice'});
-            convo.next();
-         }, {'key': 'meat'});
-         convo.next();
-      }, {'key': 'type'});
-
-      convo.on('end', function() {
-         if (convo.status == 'completed') {
-            var type = convo.extractResponse('type'),
-               meat = convo.extractResponse('meat'),
-               spice = convo.extractResponse('spice');
-
-            bot.reply(message, "Your order has been received! :+1:");
-
-            bot.startPrivateConversation({'user': userID}, function(err, convo) {
-               bot.api.users.info({user: message.user}, function(err, response) {
-                  name = response.user.real_name;
-                  convo.say(
-                     {text:"*" + name + "*",
-                     username: "Thai Bot",
-                     icon_emoji:":flag-th:",
-                        attachments: [
-                        {
-                           text: "Dish: " + type + "\nMeat: " + meat + "\nSpice: " + spice,
-                           color: "#7CD197"
-                        }
-                        ]
-                     }
-                  );
-               });
-            });
-         } else {
-               // this happens if the conversation ended prematurely for some reason
-               bot.reply(message, 'OK, nevermind!');
-         }
-      });
-
-   });
-});
-
-
-controller.hears(['pizzatime'],['direct_message'],function(bot, message) {
-   console.log(message.channel);
-   bot.startConversation(message, function(err, convo) {
-      convo.ask("What kind of pizza do you want?", function(response, convo) {
-         convo.ask("How many slices?", function(response, convo) {
-         convo.next();
-         }, {'key': 'num'});
-         convo.next();
-      }, {'key': 'type'});
-
-      convo.on('end', function() {
-         if (convo.status == 'completed') {
-            var type = convo.extractResponse('type'),
-               number = convo.extractResponse('num');
-            
-            bot.reply(message, "Your order has been received! :+1:");
-
-            bot.startPrivateConversation({'user': userID}, function(err, convo) {
-               bot.api.users.info({user: message.user}, function(err, response) {
-                  name = response.user.real_name;
-                  convo.say(
-                     {text:"*" + name + "*",
-                     username: "Pizza Bot",
-                     icon_emoji:":pizza:",
-                        attachments: [
-                        {
-                           text: "Type: " + type + "\nNumber of slices: " + number,
-                           color: "#7CD197"
-                        }
-                        ]
-                     }
-                  );
-               });
-            });
-         } else {
-               // this happens if the conversation ended prematurely for some reason
-               bot.reply(message, 'OK, nevermind!');
-         }
-      });
-
-   });
-});
