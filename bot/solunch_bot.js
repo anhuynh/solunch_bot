@@ -31,6 +31,10 @@ controller.hears(['are you there'], ['direct_message','direct_mention','mention'
 //                                                          POLL STUFFS                                                        //
 //*****************************************************************************************************************************//
 
+schedule.scheduleJob({hour: 10, minute: 0, dayOfWeek: 4}, function() {
+   startPoll();
+});
+
 controller.hears('poll options', 'direct_mention', function(bot, message) {
    bot.reply(message, "Here are the poll options: \n1) Big bone bbq\n2) Chinese\n3) Dagwoods\n4) Indian\n5) McDonald's\n6) Pho\n7) Pizza\n8) Shawarma\n9) Thai\n10) Wiches cauldron\n11) The works\n");
 });
