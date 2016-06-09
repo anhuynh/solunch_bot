@@ -1,6 +1,6 @@
 var Botkit = require('../lib/Botkit.js');
 var schedule = require('node-schedule');
-var name, userID = '__YOUR USER ID__';
+var name;
 
 process.env['token'] = '__BOT TOKEN__';
 
@@ -36,6 +36,71 @@ controller.hears('poll options', 'direct_mention', function(bot, message) {
 });
 
 controller.hears('start poll', ['direct_mention', 'mention'], function(bot, message) {
+   startPoll();
+});
+
+controller.hears('vote (.*)', 'direct_mention', function(bot, message) {
+   controller.storage.teams.get('lunchSave', function(err, data) {
+      if (data['status'] === 'open') {
+         var vote = message.match[1];
+         if (data.options.hasOwnProperty(vote)) {
+            bot.api.users.info({user: message.user}, function(err, response) {
+               if (err) { 
+                  bot.reply(message, "Sorry, I don't think you exist! :ghost:");
+               } else {
+                  if (data.userVotes.hasOwnProperty(response.user.real_name)) {
+                     var previousVote = data.userVotes[response.user.real_name];
+                     data.options[previousVote].count--;
+                     data.options[vote].count++;
+                     bot.reply(message, "Thanks for revoting, " + response.user.profile.first_name +". You previously voted for: *" + data.options[previousVote].name +
+                        "*\nYour current vote is: *" + data.options[vote].name + 
+                        "*\nVote again if you wish, I won't judge your indecisiveness! :wizard:");
+                  } else {
+                     data.options[vote].count++;
+                     bot.reply(message, "Thanks for voting, " + response.user.profile.first_name + ". You voted for: *" + data.options[vote].name + 
+                        "*\nFeel free to vote again to change your vote. To see more commands, see the list in Pinned Items.");
+                  }
+                  data.userVotes[response.user.real_name] = vote;
+                  controller.storage.teams.save(data);
+               }
+            });
+         } else {
+            bot.reply(message, "Sorry, that is not an option. Type  `poll options` or see the Pinned Items for number orders.");
+         }
+      } else {
+         bot.reply(message, "Sorry, but the poll is now closed. :sleeping:");
+      }
+   });
+});
+
+controller.hears('close poll', ['direct_mention', 'mention'], function(bot, message) {
+   closePoll();
+});
+
+controller.hears('poll status', 'direct_mention', function(bot, message) {
+   controller.storage.teams.get('lunchSave', function(err, data) {
+      var results = '',
+      status = 'Poll status: *' + data['status'] + '*';
+      for (var option in data.options) {
+         results = results.concat("\n" + data.options[option].name + ": " + data.options[option].count);
+      }
+      if (data.status === 'closed') {
+         status = status.concat("\nWinner: *" + data['winner'] + "*");
+      };
+      bot.reply(message, 
+               {text: status + '\nHere are the current results: ', 
+                  attachments: [
+                     {
+                        text: results,
+                        color: "#7CD197"
+                     }
+                  ]
+               }
+      );
+   });
+});
+
+function startPoll() {
    controller.storage.teams.save(
       {
          id: 'lunchSave',
@@ -54,96 +119,36 @@ controller.hears('start poll', ['direct_mention', 'mention'], function(bot, mess
             '10': {name: 'Wiches Cauldron', count: 0},
             '11': {name: 'The works', count: 0}
          }
-      }, function(err, id) {
-      bot.reply(message, "The lunch poll is now open!\nType `@solunch_bot vote` and then the number of an option. To see the numbers and options, type `poll options`.\nThe poll will automatically close in 2 hours. :timer_clock:");
-   });
+      });
+
+   bot.sendWebhook({text: "The lunch poll is now open!\nType `@solunch_bot vote` and then the number of an option. To see the numbers and options, type `poll options`.\nThe poll will automatically close in 2 hours. :timer_clock:"});
 
    setTimeout(function() {
-      controller.storage.teams.get('lunchSave', function(err, channel_data) {
-         if (channel_data['status'] === 'open') {
-            closePoll(bot, message);
+      controller.storage.teams.get('lunchSave', function(err, data) {
+         if (data['status'] === 'open') {
+            closePoll();
          }
       });
    }, 2 * 3600000);
-});
+}
 
-controller.hears('vote (.*)', 'direct_mention', function(bot, message) {
-   controller.storage.teams.get('lunchSave', function(err, channel_data) {
-      if (channel_data['status'] === 'open') {
-         var vote = message.match[1];
-         if (channel_data.options.hasOwnProperty(vote)) {
-            bot.api.users.info({user: message.user}, function(err, response) {
-               if (err) { 
-                  bot.reply(message, "Sorry, I don't think you exist! :ghost:");
-               } else {
-                  if (channel_data.userVotes.hasOwnProperty(response.user.real_name)) {
-                     var previousVote = channel_data.userVotes[response.user.real_name];
-                     channel_data.options[previousVote].count--;
-                     channel_data.options[vote].count++;
-                     bot.reply(message, "Thanks for revoting, " + response.user.profile.first_name +". You previously voted for: *" + channel_data.options[previousVote].name +
-                        "*\nYour current vote is: *" + channel_data.options[vote].name + 
-                        "*\nVote again if you wish, I won't judge your indecisiveness! :wizard:");
-                  } else {
-                     channel_data.options[vote].count++;
-                     bot.reply(message, "Thanks for voting, " + response.user.profile.first_name + ". You voted for: *" + channel_data.options[vote].name + 
-                        "*\nFeel free to vote again to change your vote. To see more commands, see the list in Pinned Items.");
-                  }
-                  channel_data.userVotes[response.user.real_name] = vote;
-                  controller.storage.teams.save(channel_data);
-               }
-            });
-         } else {
-            bot.reply(message, "Sorry, that is not an option. Type  `poll options` or see the Pinned Items for number orders.");
-         }
-      } else {
-         bot.reply(message, "Sorry, but the poll is now closed. :sleeping:");
-      }
-   });
-});
-
-controller.hears('close poll', ['direct_mention', 'mention'], function(bot, message) {
-   closePoll(bot, message);
-});
-
-controller.hears('poll status', 'direct_mention', function(bot, message) {
-   controller.storage.teams.get('lunchSave', function(err, channel_data) {
-      var results = '',
-      status = 'Poll status: *' + channel_data['status'] + '*';
-      for (var option in channel_data.options) {
-         results = results.concat("\n" + channel_data.options[option].name + ": " + channel_data.options[option].count);
-      }
-      if (channel_data.status === 'closed') {
-         status = status.concat("\nWinner: *" + channel_data['winner'] + "*");
-      };
-      bot.reply(message, 
-               {text: status + '\nHere are the current results: ', 
-                  attachments: [
-                     {
-                        text: results,
-                        color: "#7CD197"
-                     }
-                  ]
-               }
-      );
-   });
-});
-
-function closePoll(bot, message) {
-   controller.storage.teams.get('lunchSave', function(err, channel_data) {
-      channel_data['status'] = 'closed';
+function closePoll() {
+   controller.storage.teams.get('lunchSave', function(err, data) {
+      data['status'] = 'closed';
       var winner = {name: [''], votes: 0};
-      for (var option in channel_data.options) {
-         if (channel_data.options[option].count > winner.votes) {
-            winner = {name: [channel_data.options[option].name], votes: channel_data.options[option].count};
-         } else if(channel_data.options[option].count == winner.votes) {
-            winner['name'].push(channel_data.options[option].name);
+      for (var option in data.options) {
+         if (data.options[option].count > winner.votes) {
+            winner = {name: [data.options[option].name], votes: data.options[option].count};
+         } else if(data.options[option].count == winner.votes) {
+            winner['name'].push(data.options[option].name);
          }
       }
       shuffleArray(winner['name']);
-      channel_data['winner'] = winner['name'][0];
-      controller.storage.teams.save(channel_data, function(err, id) {
-         bot.reply(message, "The lunch poll is now closed.\n:tada: The winner is *" + winner['name'][0] + "* with " + winner['votes'] + " votes! :tada:");
-      });
+      data['winner'] = winner['name'][0];
+
+      bot.sendWebhook({text: "The lunch poll is now closed.\n:tada: The winner is *" + winner['name'][0] + "* with " + winner['votes'] + " votes! :tada:"});
+
+      controller.storage.teams.save(data);
    });
 }
 
