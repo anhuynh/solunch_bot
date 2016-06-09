@@ -1,6 +1,6 @@
 var Botkit = require('../lib/Botkit.js');
 var schedule = require('node-schedule');
-var name;
+var name, validUsers = [];
 
 process.env['token'] = '__BOT TOKEN__';
 
@@ -36,7 +36,11 @@ controller.hears('poll options', 'direct_mention', function(bot, message) {
 });
 
 controller.hears('start poll', ['direct_mention', 'mention'], function(bot, message) {
-   startPoll();
+   if (validUsers.indexOf(message.user) != -1) {
+      startPoll();
+   } else {
+      bot.reply(message, "Sorry, you are not authorized to launch a poll.");
+   }
 });
 
 controller.hears('vote (.*)', 'direct_mention', function(bot, message) {
@@ -74,7 +78,11 @@ controller.hears('vote (.*)', 'direct_mention', function(bot, message) {
 });
 
 controller.hears('close poll', ['direct_mention', 'mention'], function(bot, message) {
-   closePoll();
+   if (validUsers.indexOf(message.user) != -1) {
+      closePoll();
+   } else {
+      bot.reply(message, "Sorry, you are not authorized to close a poll.");
+   }
 });
 
 controller.hears('poll status', 'direct_mention', function(bot, message) {
