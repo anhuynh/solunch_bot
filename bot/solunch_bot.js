@@ -1,4 +1,5 @@
 var Botkit = require('../lib/Botkit.js');
+var schedule = require('node-schedule');
 var name, userID = '__YOUR USER ID__';
 
 process.env['token'] = '__BOT TOKEN__';
@@ -13,8 +14,9 @@ var controller = Botkit.slackbot({
    json_file_store: 'solunch-bot-storage'
 });
 
-controller.spawn({
-   token: process.env.token
+var bot = controller.spawn({
+   token: process.env.token,
+   incoming_webhook: {url: ''}
 }).startRTM(function(err) {
    if (err) {
       throw new Error(err);
