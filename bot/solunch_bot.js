@@ -2,8 +2,6 @@ var Botkit = require('../lib/Botkit.js');
 var schedule = require('node-schedule');
 var name, validUsers = [];
 
-process.env['token'] = '__BOT TOKEN__';
-
 if (!process.env.token) {
    console.log('Error: Specify token in environment');
    process.exit(1);
@@ -16,7 +14,7 @@ var controller = Botkit.slackbot({
 
 var bot = controller.spawn({
    token: process.env.token,
-   incoming_webhook: {url: ''}
+   incoming_webhook: {url: process.env['webhook']}
 }).startRTM(function(err) {
    if (err) {
       throw new Error(err);
