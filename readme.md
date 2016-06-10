@@ -15,9 +15,7 @@ Edit `bot/solunch_bot.js` and put the user IDs into the `validUsers` array.
 While in the `bot` folder, run:
 
 ```
-token=<YOUR BOT TOKEN> 
-webhook=<YOUR WEBHOOK URL> 
-node solunch_bot.js
+token=<YOUR BOT TOKEN> webhook=<YOUR WEBHOOK URL> node solunch_bot.js
 ```
 
 ### In Windows
