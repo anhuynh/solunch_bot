@@ -181,3 +181,20 @@ function shuffleArray(array) {
     }
     return array;
 }
+
+//*****************************************************************************************************************************//
+//                                                          CHAT STUFFS                                                       //
+//*****************************************************************************************************************************//
+var commands = "Here is a list of my commands:\n`poll status`: view the current status of the poll\n`poll options`: view valid options for voting\n`vote #`: submit a vote for an option\n";
+
+controller.hears(['help', 'assist', 'assistance'], ['direct_message', 'direct_mention'], function(bot, message) {
+   bot.reply(message, commands + "If you need anymore assistance, please contact my human.");
+});
+
+controller.hears('who is your human', ['direct_message', 'direct_mention'], function(bot, message) {
+   bot.reply(message, 'An is my human!');
+});
+
+controller.hears('(.*)', ['direct_message', 'direct_mention'], function(bot, message) {
+   bot.reply(message, "Sorry, I didn't get that. " + commands);
+});
