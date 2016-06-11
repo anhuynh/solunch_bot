@@ -33,7 +33,7 @@ schedule.scheduleJob({hour: 10, minute: 0, dayOfWeek: 4}, function() {
    startPoll();
 });
 
-controller.hears('poll options', 'direct_mention', function(bot, message) {
+controller.hears('poll options', 'direct_message', function(bot, message) {
    bot.reply(message, "Here are the poll options: \n1) Big bone bbq\n2) Chinese\n3) Dagwoods\n4) Indian\n5) McDonald's\n6) Pho\n7) Pizza\n8) Shawarma\n9) Thai\n10) Wiches cauldron\n11) The works\n");
 });
 
@@ -45,7 +45,7 @@ controller.hears('start poll', ['direct_mention', 'mention'], function(bot, mess
    }
 });
 
-controller.hears('vote (.*)', 'direct_mention', function(bot, message) {
+controller.hears('vote (.*)', 'direct_message', function(bot, message) {
    controller.storage.teams.get('lunchSave', function(err, data) {
       if (data['status'] === 'open') {
          var vote = message.match[1];
@@ -87,7 +87,7 @@ controller.hears('close poll', ['direct_mention', 'mention'], function(bot, mess
    }
 });
 
-controller.hears('poll status', 'direct_mention', function(bot, message) {
+controller.hears('poll status', 'direct_message', function(bot, message) {
    controller.storage.teams.get('lunchSave', function(err, data) {
       var results = '',
       status = 'Poll status: *' + data['status'] + '*';
@@ -96,7 +96,7 @@ controller.hears('poll status', 'direct_mention', function(bot, message) {
       }
       if (data.status === 'closed') {
          status = status.concat("\nWinner: *" + data['winner'] + "*");
-      };
+      }
       bot.reply(message, 
                {text: status + '\nHere are the current results: ', 
                   attachments: [
@@ -155,9 +155,7 @@ function closePoll() {
       }
       shuffleArray(winner['name']);
       data['winner'] = winner['name'][0];
-
       bot.sendWebhook({text: "The lunch poll is now closed.\n:tada: The winner is *" + winner['name'][0] + "* with " + winner['votes'] + " votes! :tada:"});
-
       controller.storage.teams.save(data);
    });
 }
