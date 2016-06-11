@@ -90,12 +90,15 @@ controller.hears('close poll', ['direct_mention', 'mention'], function(bot, mess
 controller.hears('poll status', 'direct_message', function(bot, message) {
    controller.storage.teams.get('lunchSave', function(err, data) {
       var results = '',
-      status = 'Poll status: *' + data['status'] + '*';
+      status = 'Poll status: *' + data['status'] + '*',
+      winning = winningOption(data);
       for (var option in data.options) {
          results = results.concat("\n" + data.options[option].name + ": " + data.options[option].count);
       }
       if (data.status === 'closed') {
          status = status.concat("\nWinner: *" + data['winner'] + "*");
+      } else {
+         status = status.concat("\nCurrently in the lead: *" + winning['name'] + "*");
       }
       bot.reply(message, 
                {text: status + '\nHere are the current results: ', 
@@ -145,19 +148,24 @@ function startPoll() {
 function closePoll() {
    controller.storage.teams.get('lunchSave', function(err, data) {
       data['status'] = 'closed';
-      var winner = {name: [''], votes: 0};
-      for (var option in data.options) {
-         if (data.options[option].count > winner.votes) {
-            winner = {name: [data.options[option].name], votes: data.options[option].count};
-         } else if(data.options[option].count == winner.votes) {
-            winner['name'].push(data.options[option].name);
-         }
-      }
-      shuffleArray(winner['name']);
+      var winner = winningOption(data);
       data['winner'] = winner['name'][0];
       bot.sendWebhook({text: "The lunch poll is now closed.\n:tada: The winner is *" + winner['name'][0] + "* with " + winner['votes'] + " votes! :tada:"});
       controller.storage.teams.save(data);
    });
+}
+
+function winningOption(data) {
+   var winner = {name: [''], votes: 0};
+   for (var option in data.options) {
+      if (data.options[option].count > winner.votes) {
+         winner = {name: [data.options[option].name], votes: data.options[option].count};
+      } else if(data.options[option].count == winner.votes) {
+         winner['name'].push(data.options[option].name);
+      }
+   }
+   shuffleArray(winner['name']);
+   return winner;
 }
 
 /*
