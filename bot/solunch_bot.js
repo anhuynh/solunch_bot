@@ -134,7 +134,7 @@ function startPoll() {
          }
       });
 
-   bot.sendWebhook({text: "The lunch poll is now open!\nType `@solunch_bot vote` and then the number of an option. To see the numbers and options, type `poll options`.\nThe poll will automatically close in 2 hours. :timer_clock:"});
+   bot.sendWebhook({text: "The lunch poll is now open!\n*Open a direct message with solunch_bot to get started.* To see the numbers and options, type `poll options`. To vote, type `vote #` with the number of the option you wish to vote for.\nThe poll will automatically close in 2 hours. :timer_clock:"});
 
    setTimeout(function() {
       controller.storage.teams.get('lunchSave', function(err, data) {
@@ -183,9 +183,15 @@ function shuffleArray(array) {
 }
 
 //*****************************************************************************************************************************//
-//                                                          CHAT STUFFS                                                       //
+//                                                          CHAT STUFFS                                                        //
 //*****************************************************************************************************************************//
-var commands = "Here is a list of my commands:\n`poll status`: view the current status of the poll\n`poll options`: view valid options for voting\n`vote #`: submit a vote for an option\n";
+var commands = "Here is a list of my commands:\n`poll status`: view the current status of the poll\n`poll options`: view valid options for voting\n`vote #`: submit a vote using the number for an option\n";
+
+controller.hears(['hello','hi','hey', 'good day sir'], 'direct_message', function(bot, message) {
+   bot.api.users.info({user: message.user}, function(err, response) {
+      bot.reply(message, "Hey there " + response.user.profile.first_name + "! " + commands);
+   });
+});
 
 controller.hears(['help', 'assist', 'assistance'], ['direct_message', 'direct_mention'], function(bot, message) {
    bot.reply(message, commands + "If you need anymore assistance, please contact my human.");
