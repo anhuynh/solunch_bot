@@ -33,7 +33,7 @@ schedule.scheduleJob({hour: 10, minute: 0, dayOfWeek: 4}, function() {
    startPoll();
 });
 
-controller.hears('poll options', 'direct_message', function(bot, message) {
+controller.hears('options', 'direct_message', function(bot, message) {
    bot.reply(message, "Here are the poll options: \n1) Big bone bbq\n2) Chinese\n3) Dagwoods\n4) Indian\n5) McDonald's\n6) Pho\n7) Pizza\n8) Shawarma\n9) Thai\n10) Wiches cauldron\n11) The Works\n");
 });
 
@@ -53,7 +53,7 @@ controller.hears('vote (.*)', 'direct_message', function(bot, message) {
             if (data.options.hasOwnProperty(vote)) {
                submitVote(bot, message, data, vote);
             } else {
-               bot.reply(message, "Sorry, that is not an option. Type `poll options` to see valid numbers for voting.");
+               bot.reply(message, "Sorry, that is not an option. Type `options` to see valid numbers for voting.");
             }
          } else {
             var valid = false;
@@ -64,7 +64,7 @@ controller.hears('vote (.*)', 'direct_message', function(bot, message) {
                }
             }
             if (valid == false) {
-               bot.reply(message, "Sorry, that is not an option. Type `poll options` to see valid options or make sure that your spelling is correct.");
+               bot.reply(message, "Sorry, that is not an option. Type `options` to see valid options or make sure that your spelling is correct.");
             }
          }
       } else {
@@ -73,7 +73,7 @@ controller.hears('vote (.*)', 'direct_message', function(bot, message) {
    });
 });
 
-controller.hears('close poll', ['direct_mention', 'mention'], function(bot, message) {
+controller.hears(['close poll', 'end poll', 'stop poll'], ['direct_mention', 'mention'], function(bot, message) {
    if (validUsers.indexOf(message.user) != -1) {
       closePoll();
    } else {
@@ -81,7 +81,7 @@ controller.hears('close poll', ['direct_mention', 'mention'], function(bot, mess
    }
 });
 
-controller.hears('poll status', 'direct_message', function(bot, message) {
+controller.hears('status', 'direct_message', function(bot, message) {
    controller.storage.teams.get('lunchSave', function(err, data) {
       var results = '',
       status = 'Poll status: *' + data['status'] + '*',
@@ -128,7 +128,7 @@ function startPoll() {
          }
       });
 
-   bot.sendWebhook({text: "The lunch poll is now open!\n*Open a direct message with solunch_bot to get started.* To see the numbers and options, type `poll options`. To vote, type `vote ` with the number or name of the option you wish to vote for.\nThe poll will automatically close in 2 hours. :timer_clock:"});
+   bot.sendWebhook({text: "The lunch poll is now open!\n*Open a direct message with solunch_bot to get started.*\nThe poll will automatically close in 2 hours. :timer_clock:"});
 
    setTimeout(function() {
       controller.storage.teams.get('lunchSave', function(err, data) {
@@ -202,7 +202,7 @@ function shuffleArray(array) {
 //*****************************************************************************************************************************//
 //                                                          CHAT STUFFS                                                        //
 //*****************************************************************************************************************************//
-var commands = "Here is a list of my commands:\n`poll status`: view the current status of the poll\n`poll options`: view valid options for voting\n`vote `: submit a vote using the name or number for an option\n";
+var commands = "Here is a list of my commands:\n`status`: view the current status of the poll\n`options`: view valid options for voting\n`vote `: submit a vote using the name or number for an option\n";
 
 controller.hears(['hello','hi','hey', 'good day sir'], 'direct_message', function(bot, message) {
    bot.api.users.info({user: message.user}, function(err, response) {
