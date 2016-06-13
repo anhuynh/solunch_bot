@@ -34,7 +34,7 @@ schedule.scheduleJob({hour: 10, minute: 0, dayOfWeek: 4}, function() {
 });
 
 controller.hears('poll options', 'direct_message', function(bot, message) {
-   bot.reply(message, "Here are the poll options: \n1) Big bone bbq\n2) Chinese\n3) Dagwoods\n4) Indian\n5) McDonald's\n6) Pho\n7) Pizza\n8) Shawarma\n9) Thai\n10) Wiches cauldron\n11) The works\n");
+   bot.reply(message, "Here are the poll options: \n1) Big bone bbq\n2) Chinese\n3) Dagwoods\n4) Indian\n5) McDonald's\n6) Pho\n7) Pizza\n8) Shawarma\n9) Thai\n10) Wiches cauldron\n11) The Works\n");
 });
 
 controller.hears('start poll', ['direct_mention', 'mention'], function(bot, message) {
@@ -49,29 +49,23 @@ controller.hears('vote (.*)', 'direct_message', function(bot, message) {
    controller.storage.teams.get('lunchSave', function(err, data) {
       if (data['status'] === 'open') {
          var vote = message.match[1];
-         if (data.options.hasOwnProperty(vote)) {
-            bot.api.users.info({user: message.user}, function(err, response) {
-               if (err) { 
-                  bot.reply(message, "Sorry, I don't think you exist! :ghost:");
-               } else {
-                  if (data.userVotes.hasOwnProperty(response.user.real_name)) {
-                     var previousVote = data.userVotes[response.user.real_name];
-                     data.options[previousVote].count--;
-                     data.options[vote].count++;
-                     bot.reply(message, "Thanks for revoting, " + response.user.profile.first_name +". You previously voted for: *" + data.options[previousVote].name +
-                        "*\nYour current vote is: *" + data.options[vote].name + 
-                        "*\nVote again if you wish, I won't judge your indecisiveness! :wizard:");
-                  } else {
-                     data.options[vote].count++;
-                     bot.reply(message, "Thanks for voting, " + response.user.profile.first_name + ". You voted for: *" + data.options[vote].name + 
-                        "*\nFeel free to vote again to change your vote. To see more commands, see the list in Pinned Items.");
-                  }
-                  data.userVotes[response.user.real_name] = vote;
-                  controller.storage.teams.save(data);
-               }
-            });
+         if (isNaN(parseInt(vote)) == false) {
+            if (data.options.hasOwnProperty(vote)) {
+               submitVote(bot, message, data, vote);
+            } else {
+               bot.reply(message, "Sorry, that is not an option. Type `poll options` to see valid numbers for voting.");
+            }
          } else {
-            bot.reply(message, "Sorry, that is not an option. Type  `poll options` or see the Pinned Items for number orders.");
+            var valid = false;
+            for (var option in data.options) {
+               if (vote === data.options[option].name.toLowerCase()) {
+                  submitVote(bot,message, data, option);
+                  valid = true;
+               }
+            }
+            if (valid == false) {
+               bot.reply(message, "Sorry, that is not an option. Type `poll options` to see valid options or make sure that your spelling is correct.");
+            }
          }
       } else {
          bot.reply(message, "Sorry, but the poll is now closed. :sleeping:");
@@ -130,11 +124,11 @@ function startPoll() {
             '8':  {name: 'Shawarma', count: 0},
             '9':  {name: 'Thai', count: 0},
             '10': {name: 'Wiches Cauldron', count: 0},
-            '11': {name: 'The works', count: 0}
+            '11': {name: 'The Works', count: 0}
          }
       });
 
-   bot.sendWebhook({text: "The lunch poll is now open!\n*Open a direct message with solunch_bot to get started.* To see the numbers and options, type `poll options`. To vote, type `vote #` with the number of the option you wish to vote for.\nThe poll will automatically close in 2 hours. :timer_clock:"});
+   bot.sendWebhook({text: "The lunch poll is now open!\n*Open a direct message with solunch_bot to get started.* To see the numbers and options, type `poll options`. To vote, type `vote ` with the number or name of the option you wish to vote for.\nThe poll will automatically close in 2 hours. :timer_clock:"});
 
    setTimeout(function() {
       controller.storage.teams.get('lunchSave', function(err, data) {
@@ -152,6 +146,29 @@ function closePoll() {
       data['winner'] = winner['name'][0];
       bot.sendWebhook({text: "The lunch poll is now closed.\n:tada: The winner is *" + winner['name'][0] + "* with " + winner['votes'] + " votes! :tada:"});
       controller.storage.teams.save(data);
+   });
+}
+
+function submitVote(bot, message, data, vote) {
+   bot.api.users.info({user: message.user}, function(err, response) {
+      if (err) {
+         bot.reply(message, "Sorry, I don't think you exist! :ghost:");
+      } else {
+         if (data.userVotes.hasOwnProperty(response.user.real_name)) {
+            var previousVote = data.userVotes[response.user.real_name];
+            data.options[previousVote].count--;
+            data.options[vote].count++;
+            bot.reply(message, "Thanks for revoting, " + response.user.profile.first_name +". You previously voted for: *" + data.options[previousVote].name +
+               "*\nYour current vote is: *" + data.options[vote].name +
+               "*\nVote again if you wish, I won't judge your indecisiveness! :wizard:");
+         } else {
+            data.options[vote].count++;
+            bot.reply(message, "Thanks for voting, " + response.user.profile.first_name + ". You voted for: *" + data.options[vote].name +
+               "*\nFeel free to vote again to change your vote. To see more commands, ask for help!");
+         }
+         data.userVotes[response.user.real_name] = vote;
+         controller.storage.teams.save(data);
+      }
    });
 }
 
@@ -185,7 +202,7 @@ function shuffleArray(array) {
 //*****************************************************************************************************************************//
 //                                                          CHAT STUFFS                                                        //
 //*****************************************************************************************************************************//
-var commands = "Here is a list of my commands:\n`poll status`: view the current status of the poll\n`poll options`: view valid options for voting\n`vote #`: submit a vote using the number for an option\n";
+var commands = "Here is a list of my commands:\n`poll status`: view the current status of the poll\n`poll options`: view valid options for voting\n`vote `: submit a vote using the name or number for an option\n";
 
 controller.hears(['hello','hi','hey', 'good day sir'], 'direct_message', function(bot, message) {
    bot.api.users.info({user: message.user}, function(err, response) {
@@ -193,14 +210,14 @@ controller.hears(['hello','hi','hey', 'good day sir'], 'direct_message', functio
    });
 });
 
-controller.hears(['help', 'assist', 'assistance'], ['direct_message', 'direct_mention'], function(bot, message) {
-   bot.reply(message, commands + "If you need anymore assistance, please contact my human.");
+controller.hears(['help', 'assist', 'assistance'], 'direct_message', function(bot, message) {
+   bot.reply(message, commands + "If you need anymore assistance, please contact my creator.");
 });
 
-controller.hears('who is your human', ['direct_message', 'direct_mention'], function(bot, message) {
-   bot.reply(message, 'An is my human!');
+controller.hears('who is your creator', ['direct_message', 'direct_mention'], function(bot, message) {
+   bot.reply(message, 'An is my creator!');
 });
 
-controller.hears('(.*)', ['direct_message', 'direct_mention'], function(bot, message) {
-   bot.reply(message, "Sorry, I didn't get that. " + commands);
+controller.hears('(.*)', 'direct_message', function(bot, message) {
+   bot.reply(message, "Sorry, I don't understand. " + commands);
 });
