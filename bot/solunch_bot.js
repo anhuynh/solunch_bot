@@ -112,7 +112,6 @@ function startPoll() {
       {
          id: 'lunchSave',
          status: 'open',
-         userVotes: {},
          options: {
             '1':  {name: 'Big Bone Bbq', count: 0},
             '2':  {name: 'Chinese', count: 0},
@@ -134,7 +133,7 @@ function startPoll() {
    bot.api.users.list({}, function(err, response) {
       for (var i = 0; i < response.members.length; i++) {
          if (response.members[i].deleted == false && response.members[i].is_bot == false && response.members[i].name !== "slackbot") {
-            team[response.members[i].id] = {name: response.members[i].real_name, attending: true, ordered: false};
+            team[response.members[i].id] = {name: response.members[i].real_name, attending: true, vote: ''};
             bot.startPrivateConversation({'user': response.members[i].id}, function(err, convo) {
                convo.ask("Hey! It's time to submit your vote for Friday's lunch! Will you be joining us for lunch tomorrow?", [
                   {
@@ -187,8 +186,8 @@ function submitVote(bot, message, data, vote) {
          user_data[message.user].attending = true;
       }
       var name = user_data[message.user].name;
-      if (data.userVotes.hasOwnProperty(name)) {
-         var previousVote = data.userVotes[name];
+      if (user_data[message.user].vote !== '') {
+         var previousVote = user_data[message.user].vote;
          data.options[previousVote].count--;
          data.options[vote].count++;
          bot.reply(message, "Thanks for revoting, " + name.split(" ")[0] +". You previously voted for: *" + data.options[previousVote].name +
@@ -199,8 +198,7 @@ function submitVote(bot, message, data, vote) {
          bot.reply(message, "Thanks for voting, " + name.split(" ")[0] + ". You voted for: *" + data.options[vote].name +
             "*\nFeel free to vote again to change your vote. To see more commands, ask for help!");
       }
-      data.userVotes[name] = vote;
-      user_data[message.user].ordered = true;
+      user_data[message.user].vote = true;
       controller.storage.teams.save(data);
       controller.storage.teams.save(user_data);
    });
