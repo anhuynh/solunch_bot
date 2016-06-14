@@ -1,6 +1,5 @@
 var Botkit = require('../lib/Botkit.js');
 var schedule = require('node-schedule');
-var name, validUsers = [];
 
 if (!process.env.token) {
    console.log('Error: Specify token in environment');
@@ -21,6 +20,13 @@ var bot = controller.spawn({
    }
 });
 
+controller.storage.teams.get('admins', function(err, data){
+   if (data == null) {
+      controller.storage.teams.save({id: 'admins', users: {}});
+      console.log("Created admin file");
+   }
+});
+
 controller.hears(['are you there'], ['direct_message','direct_mention','mention'], function(bot, message) {
    bot.reply(message,"I'm here!");
 });
@@ -28,31 +34,99 @@ controller.hears(['are you there'], ['direct_message','direct_mention','mention'
 //*****************************************************************************************************************************//
 //                                                          ADMINISTRATION                                                     //
 //*****************************************************************************************************************************//
+controller.hears('add admin (.*)', 'direct_message', function(bot, message) {
+   controller.storage.teams.get('admins', function(err, data) {
+      if (isEmpty(data.users) || data.users.hasOwnProperty(message.user)) {
+         if (message.match[1][0] == "<" && message.match[1][1] == "@"){
+            var addUser = message.match[1].split('<')[1].split('@')[1].split('>')[0];
+            if (data.users.hasOwnProperty(addUser)) {
+               bot.reply(message, "That user is already an admin!");
+            } else {
+               bot.api.users.info({user: addUser}, function(err, response) {
+                  if (isEmpty(data.users)) {
+                     data.users[addUser] = {name: response.user.real_name, super: true};
+                  } else {
+                     data.users[addUser] = {name: response.user.real_name};
+                  }
+                  controller.storage.teams.save(data);
+                  bot.reply(message, "Successfully added new admin.");
+               });
+            }
+         } else {
+            bot.reply(message, "Sorry, but that is not a valid username. Use Slack's @mention to select a user to add as an admin.");
+         }
+      } else {
+         bot.reply(message, "Sorry, you are not authorized to add admins.");
+      }
+   });
+});
+
+controller.hears('remove admin (.*)', 'direct_message', function(bot, message) {
+   controller.storage.teams.get('admins', function(err, data) {
+      if (data.users[message.user].hasOwnProperty('super')) {
+         if (message.match[1][0] == "<" && message.match[1][1] == "@"){
+            var remUser = message.match[1].split('<')[1].split('@')[1].split('>')[0];
+            if (data.users.hasOwnProperty(message.user)) {
+               delete data.users[remUser];
+               controller.storage.teams.save(data);
+               bot.reply(message, "Successfully removed admin.");
+            } else {
+               bot.reply(message, "That user is not an admin.");
+            }
+         } else {
+            bot.reply(message, "Sorry, but that is not a valid username. Use Slack's @mention to select a user to remove admin priviledges.");
+         }
+      } else {
+         bot.reply(message, "Sorry, you are not authorized to remove admins.");
+      }
+   });
+});
+
+controller.hears('list admins', 'direct_message', function(bot, message) {
+   controller.storage.teams.get('admins', function(err, data) {
+      if (data.users.hasOwnProperty(message.user)) {
+         var userList = '';
+         for (var id in data.users) {
+            if (userList === '') {
+               userList = data.users[id].name;
+            } else {
+               userList = userList.concat(", " + data.users[id].name);
+            }
+         }
+         bot.reply(message, "*Here is the list of admins:*\n" + userList);
+      } else {
+         bot.reply(message, "Sorry, you are not authorized to view admins.");
+      }
+   });
+});
+
 controller.hears('user status', 'direct_message', function(bot, message) {
-   if (validUsers.indexOf(message.user) != -1) {
-      var notAttend = '', noAnswer = '';
-      controller.storage.teams.get("users", function(err, data) {
-         for (var id in data) {
-            if (data[id].attending == false) {
-               if (notAttend === '') {
-                  notAttend = data[id].name;
-               } else {
-                  notAttend = notAttend.concat(", " + data[id].name);
+   controller.storage.teams.get('admins', function(err, data) {
+      if (data.users.hasOwnProperty(message.user)) {
+         var notAttend = '', noAnswer = '';
+         controller.storage.teams.get("users", function(err, data) {
+            for (var id in data) {
+               if (data[id].attending == false) {
+                  if (notAttend === '') {
+                     notAttend = data[id].name;
+                  } else {
+                     notAttend = notAttend.concat(", " + data[id].name);
+                  }
                }
-            }
-            if (data[id].answered == false) {
-               if (noAnswer === '') {
-                  noAnswer = data[id].name;
-               } else {
-                  noAnswer = noAnswer.concat(", " + data[id].name);
+               if (data[id].answered == false) {
+                  if (noAnswer === '') {
+                     noAnswer = data[id].name;
+                  } else {
+                     noAnswer = noAnswer.concat(", " + data[id].name);
+                  }
                }
-            }
-         };
-         bot.reply(message, "*Here are the users that will not be attending:*\n" + notAttend + "\n*Here are the users that have not answered:*\n" + noAnswer);
-      });
-   } else {
-      bot.reply(message, "Sorry, you are not authorized to view this information.");
-   }
+            };
+            bot.reply(message, "*Here are the users that will not be attending:*\n" + notAttend + "\n*Here are the users that have not answered:*\n" + noAnswer);
+         });
+      } else {
+         bot.reply(message, "Sorry, you are not authorized to view this information.");
+      }
+   });
 });
 
 //*****************************************************************************************************************************//
@@ -68,11 +142,13 @@ controller.hears('options', 'direct_message', function(bot, message) {
 });
 
 controller.hears('start poll', ['direct_mention', 'mention'], function(bot, message) {
-   if (validUsers.indexOf(message.user) != -1) {
-      startPoll();
-   } else {
-      bot.reply(message, "Sorry, you are not authorized to launch a poll.");
-   }
+   controller.storage.teams.get('admins', function(err, data) {
+      if (data.users.hasOwnProperty(message.user)) {
+         startPoll();
+      } else {
+         bot.reply(message, "Sorry, you are not authorized to launch a poll.");
+      }
+   });
 });
 
 controller.hears('vote (.*)', 'direct_message', function(bot, message) {
@@ -104,11 +180,13 @@ controller.hears('vote (.*)', 'direct_message', function(bot, message) {
 });
 
 controller.hears(['close poll', 'end poll', 'stop poll'], ['direct_mention', 'mention'], function(bot, message) {
-   if (validUsers.indexOf(message.user) != -1) {
-      closePoll();
-   } else {
-      bot.reply(message, "Sorry, you are not authorized to close a poll.");
-   }
+   controller.storage.teams.get('admins', function(err, data) {
+      if (data.users.hasOwnProperty(message.user)) {
+         closePoll();
+      } else {
+         bot.reply(message, "Sorry, you are not authorized to close a poll.");
+      }
+   });
 });
 
 controller.hears('status', 'direct_message', function(bot, message) {
@@ -250,6 +328,18 @@ function winningOption(data) {
    }
    shuffleArray(winner['name']);
    return winner;
+}
+
+//*****************************************************************************************************************************//
+//                                                      HELPER FUNCTIONS                                                       //
+//*****************************************************************************************************************************//
+
+function isEmpty(obj) {
+    for(var key in obj) {
+        if(obj.hasOwnProperty(key))
+            return false;
+    }
+    return true;
 }
 
 /*
