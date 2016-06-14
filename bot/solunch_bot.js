@@ -1,5 +1,6 @@
 var Botkit = require('../lib/Botkit.js');
 var schedule = require('node-schedule');
+require('dotenv').config();
 
 if (!process.env.token) {
    console.log('Error: Specify token in environment');
