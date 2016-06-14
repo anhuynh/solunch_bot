@@ -37,7 +37,7 @@ controller.hears(['are you there'], ['direct_message','direct_mention','mention'
 //*****************************************************************************************************************************//
 controller.hears('add admin (.*)', 'direct_message', function(bot, message) {
    controller.storage.teams.get('admins', function(err, data) {
-      if (isEmpty(data.users) || data.users.hasOwnProperty(message.user)) {
+      if (isEmpty(data.users) || data.users[message.user].hasOwnProperty('super')) {
          if (message.match[1][0] == "<" && message.match[1][1] == "@"){
             var addUser = message.match[1].split('<')[1].split('@')[1].split('>')[0];
             if (data.users.hasOwnProperty(addUser)) {
