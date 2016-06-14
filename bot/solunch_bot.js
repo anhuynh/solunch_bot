@@ -128,7 +128,39 @@ function startPoll() {
          }
       });
 
-   bot.sendWebhook({text: "The lunch poll is now open!\n*Open a direct message with solunch_bot to get started.*\nThe poll will automatically close in 2 hours. :timer_clock:"});
+   bot.sendWebhook({text: "The lunch poll is now open!\nSolunch_bot should have sent you a message. If not, open a direct message with the bot to submit a vote.\nThe poll will automatically close in 2 hours. :timer_clock:"});
+
+   var team = {id: 'users'};
+   bot.api.users.list({}, function(err, response) {
+      for (var i = 0; i < response.members.length; i++) {
+         if (response.members[i].deleted == false && response.members[i].is_bot == false && response.members[i].name !== "slackbot") {
+            team[response.members[i].id] = {name: response.members[i].real_name, attending: true, ordered: false};
+            bot.startPrivateConversation({'user': response.members[i].id}, function(err, convo) {
+               convo.ask("Hey! It's time to submit your vote for Friday's lunch! Will you be joining us for lunch tomorrow?", [
+                  {
+                     pattern: bot.utterances.yes,
+                     callback: function(response, convo) {
+                        convo.say("Awesome! Whenever you're ready, submit a vote by typing `vote` and then the name or number of an option. Ask for help if you need more assistance!");
+                        convo.next();
+                     }
+                  },
+                  {
+                     pattern: bot.utterances.no,
+                     callback: function(response, convo){
+                        convo.say("Aw, ok :slightly_frowning_face:\nIf you change your mind, feel free to submit a vote!");
+                        controller.storage.teams.get('users', function(err, data) {
+                           data[response.user].attending = false;
+                           controller.storage.teams.save(data);
+                        });
+                        convo.next();
+                     }
+                  }
+               ]);
+            });
+         }
+      }
+      controller.storage.teams.save(team);
+   });
 
    setTimeout(function() {
       controller.storage.teams.get('lunchSave', function(err, data) {
@@ -150,25 +182,27 @@ function closePoll() {
 }
 
 function submitVote(bot, message, data, vote) {
-   bot.api.users.info({user: message.user}, function(err, response) {
-      if (err) {
-         bot.reply(message, "Sorry, I don't think you exist! :ghost:");
-      } else {
-         if (data.userVotes.hasOwnProperty(response.user.real_name)) {
-            var previousVote = data.userVotes[response.user.real_name];
-            data.options[previousVote].count--;
-            data.options[vote].count++;
-            bot.reply(message, "Thanks for revoting, " + response.user.profile.first_name +". You previously voted for: *" + data.options[previousVote].name +
-               "*\nYour current vote is: *" + data.options[vote].name +
-               "*\nVote again if you wish, I won't judge your indecisiveness! :wizard:");
-         } else {
-            data.options[vote].count++;
-            bot.reply(message, "Thanks for voting, " + response.user.profile.first_name + ". You voted for: *" + data.options[vote].name +
-               "*\nFeel free to vote again to change your vote. To see more commands, ask for help!");
-         }
-         data.userVotes[response.user.real_name] = vote;
-         controller.storage.teams.save(data);
+   controller.storage.teams.get("users", function(err, user_data) {
+      if (user_data[message.user].attending == false) {
+         user_data[message.user].attending = true;
       }
+      var name = user_data[message.user].name;
+      if (data.userVotes.hasOwnProperty(name)) {
+         var previousVote = data.userVotes[name];
+         data.options[previousVote].count--;
+         data.options[vote].count++;
+         bot.reply(message, "Thanks for revoting, " + name.split(" ")[0] +". You previously voted for: *" + data.options[previousVote].name +
+            "*\nYour current vote is: *" + data.options[vote].name +
+            "*\nVote again if you wish, I won't judge your indecisiveness! :wizard:");
+      } else {
+         data.options[vote].count++;
+         bot.reply(message, "Thanks for voting, " + name.split(" ")[0] + ". You voted for: *" + data.options[vote].name +
+            "*\nFeel free to vote again to change your vote. To see more commands, ask for help!");
+      }
+      data.userVotes[name] = vote;
+      user_data[message.user].ordered = true;
+      controller.storage.teams.save(data);
+      controller.storage.teams.save(user_data);
    });
 }
 
@@ -205,8 +239,8 @@ function shuffleArray(array) {
 var commands = "Here is a list of my commands:\n`status`: view the current status of the poll\n`options`: view valid options for voting\n`vote `: submit a vote using the name or number for an option\n";
 
 controller.hears(['hello','hi','hey', 'good day sir'], 'direct_message', function(bot, message) {
-   bot.api.users.info({user: message.user}, function(err, response) {
-      bot.reply(message, "Hey there " + response.user.profile.first_name + "! " + commands);
+   controller.storage.teams.get("users", function(err, user_data) {
+      bot.reply(message, "Hey there " + user_data[message.user].name.split(" ")[0] + "! " + commands);
    });
 });
 
