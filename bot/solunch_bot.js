@@ -26,6 +26,36 @@ controller.hears(['are you there'], ['direct_message','direct_mention','mention'
 });
 
 //*****************************************************************************************************************************//
+//                                                          ADMINISTRATION                                                     //
+//*****************************************************************************************************************************//
+controller.hears('user status', 'direct_message', function(bot, message) {
+   if (validUsers.indexOf(message.user) != -1) {
+      var notAttend = '', noAnswer = '';
+      controller.storage.teams.get("users", function(err, data) {
+         for (var id in data) {
+            if (data[id].attending == false) {
+               if (notAttend === '') {
+                  notAttend = data[id].name;
+               } else {
+                  notAttend = notAttend.concat(", " + data[id].name);
+               }
+            }
+            if (data[id].answered == false) {
+               if (noAnswer === '') {
+                  noAnswer = data[id].name;
+               } else {
+                  noAnswer = noAnswer.concat(", " + data[id].name);
+               }
+            }
+         };
+         bot.reply(message, "*Here are the users that will not be attending:*\n" + notAttend + "\n*Here are the users that have not answered:*\n" + noAnswer);
+      });
+   } else {
+      bot.reply(message, "Sorry, you are not authorized to view this information.");
+   }
+});
+
+//*****************************************************************************************************************************//
 //                                                          POLL STUFFS                                                        //
 //*****************************************************************************************************************************//
 
@@ -133,13 +163,17 @@ function startPoll() {
    bot.api.users.list({}, function(err, response) {
       for (var i = 0; i < response.members.length; i++) {
          if (response.members[i].deleted == false && response.members[i].is_bot == false && response.members[i].name !== "slackbot") {
-            team[response.members[i].id] = {name: response.members[i].real_name, attending: true, vote: ''};
+            team[response.members[i].id] = {name: response.members[i].real_name, answered: false, attending: true, vote: ''};
             bot.startPrivateConversation({'user': response.members[i].id}, function(err, convo) {
                convo.ask("Hey! It's time to submit your vote for Friday's lunch! Will you be joining us for lunch tomorrow?", [
                   {
                      pattern: bot.utterances.yes,
                      callback: function(response, convo) {
                         convo.say("Awesome! Whenever you're ready, submit a vote by typing `vote` and then the name or number of an option. Ask for help if you need more assistance!");
+                        controller.storage.teams.get('users', function(err, data) {
+                           data[response.user].answered = true;
+                           controller.storage.teams.save(data);
+                        });
                         convo.next();
                      }
                   },
@@ -149,6 +183,7 @@ function startPoll() {
                         convo.say("Aw, ok :slightly_frowning_face:\nIf you change your mind, feel free to submit a vote!");
                         controller.storage.teams.get('users', function(err, data) {
                            data[response.user].attending = false;
+                           data[response.user].answered = true;
                            controller.storage.teams.save(data);
                         });
                         convo.next();
