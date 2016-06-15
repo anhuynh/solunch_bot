@@ -312,7 +312,7 @@ function submitVote(bot, message, data, vote) {
          bot.reply(message, "Thanks for voting, " + name.split(" ")[0] + ". You voted for: *" + data.options[vote].name +
             "*\nFeel free to vote again to change your vote. To see more commands, ask for help!");
       }
-      user_data[message.user].vote = true;
+      user_data[message.user].vote = vote;
       controller.storage.teams.save(data);
       controller.storage.teams.save(user_data);
    });
