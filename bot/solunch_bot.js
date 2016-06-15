@@ -97,19 +97,20 @@ controller.hears('user status', 'direct_message', function(bot, message) {
    controller.storage.teams.get('admins', function(err, data) {
       if (data.users.hasOwnProperty(message.user)) {
          var notAttend = '', noAnswer = '';
-         controller.storage.teams.get("users", function(err, data) {
-            for (var id in data) {
-               if (data[id].attending == false) {
+         controller.storage.teams.get('users', function(err, data) {
+            for (var id in data.list) {
+               var name = data.list[id].name.split(" ");
+               if (data.list[id].attending == false) {
                   if (notAttend === '') {
-                     notAttend = data[id].name;
+                     notAttend = name[0] + " " + name[1][0] + ".";
                   } else {
-                     notAttend = notAttend.concat(", " + data[id].name);
+                     notAttend = notAttend.concat(", " + name[0] + " " + name[1][0] + ".");
                   }
-               } else if (data[id].answered == false) {
+               } else if (data.list[id].answered == false) {
                   if (noAnswer === '') {
-                     noAnswer = data[id].name;
+                     noAnswer = name[0] + " " + name[1][0] + ".";
                   } else {
-                     noAnswer = noAnswer.concat(", " + data[id].name);
+                     noAnswer = noAnswer.concat(", " + name[0] + " " + name[1][0] + ".");
                   }
                }
             };
@@ -247,11 +248,11 @@ function startPoll() {
 
    bot.sendWebhook({text: "The lunch poll is now open!\nSolunch_bot should have sent you a message. If not, open a direct message with the bot to submit a vote.\nThe poll will automatically close in 2 hours. :timer_clock:"});
 
-   var team = {id: 'users'};
+   var team = {id: 'users', list:{}};
    bot.api.users.list({}, function(err, response) {
       for (var i = 0; i < response.members.length; i++) {
          if (response.members[i].deleted == false && response.members[i].is_bot == false && response.members[i].name !== "slackbot") {
-            team[response.members[i].id] = {name: response.members[i].real_name, answered: false, attending: true, vote: ''};
+            team.list[response.members[i].id] = {name: response.members[i].real_name, answered: false, attending: true, vote: ''};
             bot.startPrivateConversation({'user': response.members[i].id}, function(err, convo) {
                convo.ask("Hey! It's time to submit your vote for Friday's lunch! Will you be joining us for lunch tomorrow?", [
                   {
@@ -259,7 +260,7 @@ function startPoll() {
                      callback: function(response, convo) {
                         convo.say("Awesome! Whenever you're ready, submit a vote by typing `vote` and then the name or number of an option. Ask for help if you need more assistance!");
                         controller.storage.teams.get('users', function(err, data) {
-                           data[response.user].answered = true;
+                           data.list[response.user].answered = true;
                            controller.storage.teams.save(data);
                         });
                         convo.next();
@@ -270,8 +271,8 @@ function startPoll() {
                      callback: function(response, convo){
                         convo.say("Aw, ok :slightly_frowning_face:\nIf you change your mind, feel free to submit a vote!");
                         controller.storage.teams.get('users', function(err, data) {
-                           data[response.user].attending = false;
-                           data[response.user].answered = true;
+                           data.list[response.user].attending = false;
+                           data.list[response.user].answered = true;
                            controller.storage.teams.save(data);
                         });
                         convo.next();
@@ -308,16 +309,16 @@ function closePoll() {
 }
 
 function submitVote(bot, message, data, vote) {
-   controller.storage.teams.get("users", function(err, user_data) {
-      if (user_data[message.user].attending == false) {
-         user_data[message.user].attending = true;
+   controller.storage.teams.get('users', function(err, user_data) {
+      if (user_data.list[message.user].attending == false) {
+         user_data.list[message.user].attending = true;
       }
-      if (user_data[message.user].answered == false) {
-         user_data[message.user].answered == true;
+      if (user_data.list[message.user].answered == false) {
+         user_data.list[message.user].answered == true;
       }
-      var name = user_data[message.user].name;
-      if (user_data[message.user].vote !== '') {
-         var previousVote = user_data[message.user].vote;
+      var name = user_data.list[message.user].name;
+      if (user_data.list[message.user].vote !== '') {
+         var previousVote = user_data.list[message.user].vote;
          data.options[previousVote].count--;
          data.options[vote].count++;
          bot.reply(message, "Thanks for revoting, " + name.split(" ")[0] +". You previously voted for: *" + data.options[previousVote].name +
@@ -328,7 +329,7 @@ function submitVote(bot, message, data, vote) {
          bot.reply(message, "Thanks for voting, " + name.split(" ")[0] + ". You voted for: *" + data.options[vote].name +
             "*\nFeel free to vote again to change your vote. To see more commands, ask for help!");
       }
-      user_data[message.user].vote = vote;
+      user_data.list[message.user].vote = vote;
       controller.storage.teams.save(data);
       controller.storage.teams.save(user_data);
    });
@@ -379,8 +380,8 @@ function shuffleArray(array) {
 var commands = "Here is a list of my commands:\n`status`: view the current status of the poll\n`options`: view valid options for voting\n`vote `: submit a vote using the name or number for an option\n";
 
 controller.hears(['hello','hi','hey', 'good day sir'], 'direct_message', function(bot, message) {
-   controller.storage.teams.get("users", function(err, user_data) {
-      bot.reply(message, "Hey there " + user_data[message.user].name.split(" ")[0] + "! " + commands);
+   controller.storage.teams.get('users', function(err, user_data) {
+      bot.reply(message, "Hey there " + user_data.list[message.user].name.split(" ")[0] + "! " + commands);
    });
 });
 
