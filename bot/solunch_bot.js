@@ -316,7 +316,7 @@ function submitVote(bot, message, data, vote) {
          user_data.list[message.user].attending = true;
       }
       if (user_data.list[message.user].answered == false) {
-         user_data.list[message.user].answered == true;
+         user_data.list[message.user].answered = true;
       }
       var name = user_data.list[message.user].name;
       if (user_data.list[message.user].vote !== '') {
