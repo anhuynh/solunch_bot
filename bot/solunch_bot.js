@@ -51,6 +51,9 @@ controller.hears('add admin (.*)', 'direct_message', function(bot, message) {
                   }
                   controller.storage.teams.save(data);
                   bot.reply(message, "Successfully added new admin.");
+                  setTimeout(function() {
+                     listAdmins(bot, message);
+                  }, 500);
                });
             }
          } else {
@@ -71,6 +74,9 @@ controller.hears('remove admin (.*)', 'direct_message', function(bot, message) {
                delete data.users[remUser];
                controller.storage.teams.save(data);
                bot.reply(message, "Successfully removed admin.");
+               setTimeout(function() {
+                     listAdmins(bot, message);
+               }, 500);
             } else {
                bot.reply(message, "That user is not an admin.");
             }
@@ -84,21 +90,7 @@ controller.hears('remove admin (.*)', 'direct_message', function(bot, message) {
 });
 
 controller.hears('list admins', 'direct_message', function(bot, message) {
-   controller.storage.teams.get('admins', function(err, data) {
-      if (data.users.hasOwnProperty(message.user)) {
-         var userList = '';
-         for (var id in data.users) {
-            if (userList === '') {
-               userList = data.users[id].name;
-            } else {
-               userList = userList.concat(", " + data.users[id].name);
-            }
-         }
-         bot.reply(message, "*Here is the list of admins:*\n" + userList);
-      } else {
-         bot.reply(message, "Sorry, you are not authorized to view admins.");
-      }
-   });
+   listAdmins(bot, message);
 });
 
 controller.hears('user status', 'direct_message', function(bot, message) {
@@ -129,6 +121,24 @@ controller.hears('user status', 'direct_message', function(bot, message) {
       }
    });
 });
+
+function listAdmins(bot, message) {
+   controller.storage.teams.get('admins', function(err, data) {
+      if (data.users.hasOwnProperty(message.user)) {
+         var userList = '';
+         for (var id in data.users) {
+            if (userList === '') {
+               userList = data.users[id].name;
+            } else {
+               userList = userList.concat(", " + data.users[id].name);
+            }
+         }
+         bot.reply(message, "*Here is the list of admins:*\n" + userList);
+      } else {
+         bot.reply(message, "Sorry, you are not authorized to view admins.");
+      }
+   });
+}
 
 //*****************************************************************************************************************************//
 //                                                          POLL STUFFS                                                        //
