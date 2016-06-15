@@ -105,8 +105,7 @@ controller.hears('user status', 'direct_message', function(bot, message) {
                   } else {
                      notAttend = notAttend.concat(", " + data[id].name);
                   }
-               }
-               if (data[id].answered == false) {
+               } else if (data[id].answered == false) {
                   if (noAnswer === '') {
                      noAnswer = data[id].name;
                   } else {
@@ -296,11 +295,15 @@ function startPoll() {
 
 function closePoll() {
    controller.storage.teams.get('lunchSave', function(err, data) {
-      data['status'] = 'closed';
-      var winner = winningOption(data);
-      data['winner'] = winner['name'][0];
-      bot.sendWebhook({text: "The lunch poll is now closed.\n:tada: The winner is *" + winner['name'][0] + "* with " + winner['votes'] + " votes! :tada:"});
-      controller.storage.teams.save(data);
+      if (data.status === 'closed') {
+         bot.sendWebhook({text: "The poll is already closed!"});
+      } else {
+         data['status'] = 'closed';
+         var winner = winningOption(data);
+         data['winner'] = winner['name'][0];
+         bot.sendWebhook({text: "The lunch poll is now closed.\n:tada: The winner is *" + winner['name'][0] + "* with " + winner['votes'] + " votes! :tada:"});
+         controller.storage.teams.save(data);
+      }
    });
 }
 
@@ -308,6 +311,9 @@ function submitVote(bot, message, data, vote) {
    controller.storage.teams.get("users", function(err, user_data) {
       if (user_data[message.user].attending == false) {
          user_data[message.user].attending = true;
+      }
+      if (user_data[message.user].answered == false) {
+         user_data[message.user].answered == true;
       }
       var name = user_data[message.user].name;
       if (user_data[message.user].vote !== '') {
