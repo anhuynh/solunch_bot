@@ -163,7 +163,7 @@ controller.hears('start poll', ['direct_mention', 'mention'], function(bot, mess
 });
 
 controller.hears('vote (.*)', 'direct_message', function(bot, message) {
-   controller.storage.teams.get('lunchSave', function(err, data) {
+   controller.storage.teams.get('pollSave', function(err, data) {
       if (data['status'] === 'open') {
          var vote = message.match[1];
          if (isNaN(parseInt(vote)) == false) {
@@ -201,7 +201,7 @@ controller.hears(['close poll', 'end poll', 'stop poll'], ['direct_mention', 'me
 });
 
 controller.hears('status', 'direct_message', function(bot, message) {
-   controller.storage.teams.get('lunchSave', function(err, data) {
+   controller.storage.teams.get('pollSave', function(err, data) {
       var results = '',
       status = 'Poll status: *' + data['status'] + '*',
       winning = winningOption(data);
@@ -227,9 +227,11 @@ controller.hears('status', 'direct_message', function(bot, message) {
 });
 
 function startPoll() {
+   var date = new Date();
    controller.storage.teams.save(
       {
-         id: 'lunchSave',
+         id: 'pollSave',
+         date: date.getMonth() + "-" + date.getDate(),
          status: 'open',
          options: {
             '1':  {name: 'Big Bone Bbq', count: 0},
@@ -286,7 +288,7 @@ function startPoll() {
    });
 
    setTimeout(function() {
-      controller.storage.teams.get('lunchSave', function(err, data) {
+      controller.storage.teams.get('pollSave', function(err, data) {
          if (data['status'] === 'open') {
             closePoll();
          }
@@ -295,7 +297,7 @@ function startPoll() {
 }
 
 function closePoll() {
-   controller.storage.teams.get('lunchSave', function(err, data) {
+   controller.storage.teams.get('pollSave', function(err, data) {
       if (data.status === 'closed') {
          bot.sendWebhook({text: "The poll is already closed!"});
       } else {
