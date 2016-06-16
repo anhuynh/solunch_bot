@@ -137,13 +137,14 @@ function listAdmins(bot, message) {
 //*****************************************************************************************************************************//
 //                                                          POLL STUFFS                                                        //
 //*****************************************************************************************************************************//
+var options = "*Here are the poll options:*\n1) Big bone bbq\n2) Chinese\n3) Dagwoods\n4) Indian\n5) McDonald's\n6) Pho\n7) Pizza\n8) Shawarma\n9) Thai\n10) Wiches cauldron\n11) The Works\n";
 
 schedule.scheduleJob({hour: 10, minute: 0, dayOfWeek: 4}, function() {
    startPoll();
 });
 
 controller.hears('options', 'direct_message', function(bot, message) {
-   bot.reply(message, "Here are the poll options: \n1) Big bone bbq\n2) Chinese\n3) Dagwoods\n4) Indian\n5) McDonald's\n6) Pho\n7) Pizza\n8) Shawarma\n9) Thai\n10) Wiches cauldron\n11) The Works\n");
+   bot.reply(message, options);
 });
 
 controller.hears('start poll', ['direct_mention', 'mention'], function(bot, message) {
@@ -250,7 +251,7 @@ function startPoll() {
          if (response.members[i].deleted == false && response.members[i].is_bot == false && response.members[i].name !== "slackbot") {
             team.list[response.members[i].id] = {name: response.members[i].real_name, vote: ''};
             bot.startPrivateConversation({'user': response.members[i].id}, function(err, convo) {
-               convo.ask("Hey! It's time to submit your vote for Friday's lunch!\nWhenever you're ready, submit a vote by typing `vote` and then the name or number of an option. Ask for help if you need more assistance!");
+               convo.ask("Hey! It's time to submit your vote for Friday's lunch!\n" + options + "Whenever you're ready, submit a vote by typing `vote` and then the name or number of an option. Ask for help if you need more assistance!");
                convo.next();
             });
          }
