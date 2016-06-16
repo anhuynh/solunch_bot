@@ -100,13 +100,7 @@ controller.hears('user status', 'direct_message', function(bot, message) {
          controller.storage.teams.get('users', function(err, data) {
             for (var id in data.list) {
                var name = data.list[id].name.split(" ");
-               if (data.list[id].attending == false) {
-                  if (notAttend === '') {
-                     notAttend = name[0] + " " + name[1][0] + ".";
-                  } else {
-                     notAttend = notAttend.concat(", " + name[0] + " " + name[1][0] + ".");
-                  }
-               } else if (data.list[id].answered == false) {
+               if (data.list[id].vote === '') {
                   if (noAnswer === '') {
                      noAnswer = name[0] + " " + name[1][0] + ".";
                   } else {
@@ -114,7 +108,7 @@ controller.hears('user status', 'direct_message', function(bot, message) {
                   }
                }
             };
-            bot.reply(message, "*Here are the users that will not be attending:*\n" + notAttend + "\n*Here are the users that have not answered:*\n" + noAnswer);
+            bot.reply(message, "*Here are the users that have not voted:*\n" + noAnswer);
          });
       } else {
          bot.reply(message, "Sorry, you are not authorized to view this information.");
@@ -254,33 +248,10 @@ function startPoll() {
    bot.api.users.list({}, function(err, response) {
       for (var i = 0; i < response.members.length; i++) {
          if (response.members[i].deleted == false && response.members[i].is_bot == false && response.members[i].name !== "slackbot") {
-            team.list[response.members[i].id] = {name: response.members[i].real_name, answered: false, attending: true, vote: ''};
+            team.list[response.members[i].id] = {name: response.members[i].real_name, vote: ''};
             bot.startPrivateConversation({'user': response.members[i].id}, function(err, convo) {
-               convo.ask("Hey! It's time to submit your vote for Friday's lunch! Will you be joining us for lunch tomorrow?", [
-                  {
-                     pattern: bot.utterances.yes,
-                     callback: function(response, convo) {
-                        convo.say("Awesome! Whenever you're ready, submit a vote by typing `vote` and then the name or number of an option. Ask for help if you need more assistance!");
-                        controller.storage.teams.get('users', function(err, data) {
-                           data.list[response.user].answered = true;
-                           controller.storage.teams.save(data);
-                        });
-                        convo.next();
-                     }
-                  },
-                  {
-                     pattern: bot.utterances.no,
-                     callback: function(response, convo){
-                        convo.say("Aw, ok :slightly_frowning_face:\nIf you change your mind, feel free to submit a vote!");
-                        controller.storage.teams.get('users', function(err, data) {
-                           data.list[response.user].attending = false;
-                           data.list[response.user].answered = true;
-                           controller.storage.teams.save(data);
-                        });
-                        convo.next();
-                     }
-                  }
-               ]);
+               convo.ask("Hey! It's time to submit your vote for Friday's lunch!\nWhenever you're ready, submit a vote by typing `vote` and then the name or number of an option. Ask for help if you need more assistance!");
+               convo.next();
             });
          }
       }
@@ -312,12 +283,6 @@ function closePoll() {
 
 function submitVote(bot, message, data, vote) {
    controller.storage.teams.get('users', function(err, user_data) {
-      if (user_data.list[message.user].attending == false) {
-         user_data.list[message.user].attending = true;
-      }
-      if (user_data.list[message.user].answered == false) {
-         user_data.list[message.user].answered = true;
-      }
       var name = user_data.list[message.user].name;
       if (user_data.list[message.user].vote !== '') {
          var previousVote = user_data.list[message.user].vote;
