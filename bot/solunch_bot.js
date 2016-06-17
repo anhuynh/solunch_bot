@@ -198,11 +198,21 @@ controller.hears(['close poll', 'end poll', 'stop poll'], ['direct_mention', 'me
 controller.hears('status', 'direct_message', function(bot, message) {
    controller.storage.teams.get('pollSave', function(err, data) {
       var results = '',
+      sortedOptions = [],
       status = 'Poll status: *' + data['status'] + '*',
       winning = winningOption(data);
+
       for (var option in data.options) {
-         results = results.concat("\n" + data.options[option].name + ": " + data.options[option].count);
+         data.options[option].number = option;
+         sortedOptions.push(data.options[option]);
       }
+      sortedOptions.sort(function(a, b) {
+         return b.count - a.count;
+      });
+      for(var i = 0; i < sortedOptions.length; i++) {
+         results = results.concat("\n" + sortedOptions[i].number + ") " + sortedOptions[i].name + ": " + sortedOptions[i].count);
+      }
+
       if (data.status === 'closed') {
          status = status.concat("\nWinner: *" + data['winner'] + "*");
       } else {
