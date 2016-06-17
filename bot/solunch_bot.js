@@ -277,7 +277,7 @@ controller.hears('status', 'direct_message', function(bot, message) {
       sortedOptions.sort(function(a, b) {
          return b.count - a.count;
       });
-      for(var i = 0; i < sortedOptions.length; i++) {
+      for (var i = 0; i < sortedOptions.length; i++) {
          results = results.concat("\n" + sortedOptions[i].number + ") " + sortedOptions[i].name + ": " + sortedOptions[i].count);
       }
 
@@ -286,16 +286,7 @@ controller.hears('status', 'direct_message', function(bot, message) {
       } else {
          status = status.concat("\nCurrently in the lead: *" + winning['name'] + "*");
       }
-      bot.reply(message, 
-               {text: status + '\nHere are the current results: ', 
-                  attachments: [
-                     {
-                        text: results,
-                        color: "#7CD197"
-                     }
-                  ]
-               }
-      );
+      bot.reply(message, {text: status + '\n*Here are the current results:* ' + results});
    });
 });
 
