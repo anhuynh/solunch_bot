@@ -28,6 +28,13 @@ controller.storage.teams.get('admins', function(err, data){
    }
 });
 
+controller.storage.teams.get('options', function(err, data) {
+   if (data == null) {
+      controller.storage.teams.save({id: 'options', list: {}});
+      console.log("Created options file");
+   }
+});
+
 controller.hears(['are you there'], ['direct_message','direct_mention','mention'], function(bot, message) {
    bot.reply(message,"I'm here!");
 });
@@ -116,6 +123,69 @@ controller.hears('user status', 'direct_message', function(bot, message) {
    });
 });
 
+controller.hears('add option (.*)', 'direct_message', function(bot, message) {
+   controller.storage.teams.get('admins', function(err, data) {
+      if (data.users.hasOwnProperty(message.user)) {
+         controller.storage.teams.get('options', function(err, data) {
+            if (isEmpty(data.list)) {
+               data.list['1'] = {name: message.match[1]};
+               controller.storage.teams.save(data);
+            } else {
+               var addOption = message.match[1].toLowerCase(),
+               dup = false;
+               for (var option in data.list) {
+                  if (addOption === data.list[option].name.toLowerCase()) {
+                     dup = true;
+                     bot.reply(message, "*" + message.match[1] + "* has already been added!");
+                     break;
+                  }
+               }
+               if (!dup) {
+                  var highest = Object.keys(data.list).pop();
+                  highest = parseInt(highest) + 1;
+                  data.list[highest.toString()] = {name: message.match[1]};
+                  controller.storage.teams.save(data);
+                  bot.reply(message, "Successfully saved *" + message.match[1] + "* as a poll option.");
+                  setTimeout(function() {
+                     listOptions(bot, message);
+                  }, 500);
+               }
+            }
+         });
+      } else {
+         bot.reply(message, "Sorry, you are not authorized to add a poll option.");
+      }
+   });
+});
+
+controller.hears('remove option (.*)', 'direct_message', function(bot, message) {
+   controller.storage.teams.get('admins', function(err, data) {
+      if (data.users.hasOwnProperty(message.user)) {
+         controller.storage.teams.get('options', function(err, data) {
+            var remOption = message.match[1].toLowerCase(),
+            deleted = false;
+            for (var option in data.list) {
+               if (remOption === data.list[option].name.toLowerCase()) {
+                  delete data.list[option];
+                  deleted = true;
+               }
+            }
+            if (deleted) {
+               controller.storage.teams.save(data);
+               bot.reply(message, "Successfully deleted *" + message.match[1] + "* from poll options.");
+               setTimeout(function() {
+                  listOptions(bot, message);
+               }, 500);
+            } else {
+               bot.reply(message, "Sorry, but I couldn't find *" + message.match[1] + "* in the list of poll options.");
+            }
+         });
+      } else {
+         bot.reply(message, "Sorry, you are not authorized to remove a poll option.");
+      }
+   });
+});
+
 function listAdmins(bot, message) {
    controller.storage.teams.get('admins', function(err, data) {
       if (data.users.hasOwnProperty(message.user)) {
@@ -137,14 +207,12 @@ function listAdmins(bot, message) {
 //*****************************************************************************************************************************//
 //                                                          POLL STUFFS                                                        //
 //*****************************************************************************************************************************//
-var options = "*Here are the poll options:*\n1) Big bone bbq\n2) Chinese\n3) Dagwoods\n4) Indian\n5) McDonald's\n6) Pho\n7) Pizza\n8) Shawarma\n9) Thai\n10) Wiches cauldron\n11) The Works\n";
-
 schedule.scheduleJob({hour: 10, minute: 0, dayOfWeek: 4}, function() {
    startPoll();
 });
 
 controller.hears('options', 'direct_message', function(bot, message) {
-   bot.reply(message, options);
+   listOptions(bot, message);
 });
 
 controller.hears('start poll', ['direct_mention', 'mention'], function(bot, message) {
@@ -261,8 +329,16 @@ function startPoll() {
          if (response.members[i].deleted == false && response.members[i].is_bot == false && response.members[i].name !== "slackbot") {
             team.list[response.members[i].id] = {name: response.members[i].real_name, vote: ''};
             bot.startPrivateConversation({'user': response.members[i].id}, function(err, convo) {
-               convo.ask("Hey! It's time to submit your vote for Friday's lunch!\n" + options + "Whenever you're ready, submit a vote by typing `vote` and then the name or number of an option. Ask for help if you need more assistance!");
-               convo.next();
+               controller.storage.teams.get('options', function(err, data) {
+                  var options = '',
+                  num = 1;
+                  for (var option in data.list) {
+                     options = options.concat("\n" + num + ") " + data.list[option].name);
+                     num++;
+                  }
+                  convo.say("Hey! It's time to submit your vote for Friday's lunch!\n*Here are the poll options:*" + options + "\nWhenever you're ready, submit a vote by typing `vote` and then the name or number of an option. Ask for help if you need more assistance!");
+                  convo.next();
+               });
             });
          }
       }
@@ -324,6 +400,18 @@ function winningOption(data) {
    }
    shuffleArray(winner['name']);
    return winner;
+}
+
+function listOptions(bot, message) {
+   controller.storage.teams.get('options', function(err, data) {
+      var options = '',
+      num = 1;
+      for (var option in data.list) {
+         options = options.concat("\n" + num + ") " + data.list[option].name);
+         num++;
+      }
+      bot.reply(message, "*Here are the poll options:*" + options);
+   });
 }
 
 //*****************************************************************************************************************************//
