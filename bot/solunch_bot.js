@@ -292,25 +292,21 @@ controller.hears('status', 'direct_message', function(bot, message) {
 
 function startPoll() {
    var date = new Date();
-   controller.storage.teams.save(
+   controller.storage.teams.get('options', function(err, data) {
+      var optionsList = {},
+      num = 1;
+      for (var option in data.list) {
+         optionsList[num] = {name: data.list[option].name, count: 0};
+         num++;
+      }
+      controller.storage.teams.save(
       {
          id: 'pollSave',
          date: date.getMonth() + "-" + date.getDate(),
          status: 'open',
-         options: {
-            '1':  {name: 'Big Bone Bbq', count: 0},
-            '2':  {name: 'Chinese', count: 0},
-            '3':  {name: 'Dagwoods', count: 0},
-            '4':  {name: 'Indian', count: 0},
-            '5':  {name: 'McDonalds', count: 0},
-            '6':  {name: 'Pho', count: 0},
-            '7':  {name: 'Pizza', count: 0},
-            '8':  {name: 'Shawarma', count: 0},
-            '9':  {name: 'Thai', count: 0},
-            '10': {name: 'Wiches Cauldron', count: 0},
-            '11': {name: 'The Works', count: 0}
-         }
+         options: optionsList
       });
+   });
 
    bot.sendWebhook({text: "The lunch poll is now open!\nSolunch_bot should have sent you a message. If not, open a direct message with the bot to submit a vote.\nThe poll will automatically close in 2 hours. :timer_clock:"});
 
